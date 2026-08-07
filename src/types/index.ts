@@ -53,6 +53,8 @@ export interface ProgressionResult {
   deload: boolean;
   nouvelle_charge: number;
   nouveau_compteur_echecs: number;
+  deload_suggere?: boolean;
+  plateau_detecte?: boolean;
 }
 
 export interface Profil {

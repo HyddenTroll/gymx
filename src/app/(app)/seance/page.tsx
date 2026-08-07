@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { calculerProgression } from "@/lib/progression/engine";
+import { calculerProgressionRPE } from "@/lib/progression/engine";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
@@ -47,7 +47,7 @@ export default function SeancePage() {
   const [loading, setLoading] = useState(true); const [noProfil, setNoProfil] = useState(false); const [noProgramme, setNoProgramme] = useState(false);
   const [seanceId, setSeanceId] = useState<string | null>(null);
   const [exercices, setExercices] = useState<ExerciceEnCours[]>([]);
-  const [chrono, setChrono] = useState<number | null>(null); const [chronoRunning, setChronoRunning] = useState(false); const [saving, setSaving] = useState(false);
+  const [chrono, setChrono] = useState<number | null>(null); const [chronoRunning, setChronoRunning] = useState(false); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
   const pathname = "/seance";
 
   const chargerSeance = useCallback(async () => {
@@ -108,18 +108,24 @@ export default function SeancePage() {
 
   const formaterTemps = (s: number): string => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const submitSlider = async (exoIdx: number, cran: Cran) => {
+  const submitSlider = async (exoIdx: number, cran: Cran, rpeValue?: number) => {
     if (!seanceId) return;
     const exo = exercices[exoIdx];
+    const rpe = rpeValue || (cran === "facile" ? 4 : cran === "ca_passe" ? 6 : cran === "dur" ? 8 : cran === "a_la_limite" ? 9 : 10);
     setExercices((prev) => { const n = [...prev]; n[exoIdx] = { ...n[exoIdx], slider: cran, slider_submitted: true }; return n; });
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("effort").upsert({ user_id: user!.id, seance_id: seanceId, exercice_id: exo.exercice.id, valeur: cran === "facile" ? 4 : cran === "ca_passe" ? 6 : cran === "dur" ? 8 : cran === "a_la_limite" ? 9 : 10, cran });
+    await supabase.from("effort").upsert({ user_id: user!.id, seance_id: seanceId, exercice_id: exo.exercice.id, valeur: rpe, cran });
     const { data: chargeData } = await supabase.from("charges").select("*").eq("user_id", user!.id).eq("exercice_id", exo.exercice.id).single();
     if (!chargeData) return;
     const { data: profil } = await supabase.from("profil").select("niveau").eq("user_id", user!.id).single();
-    const resultat = calculerProgression(cran, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle);
+    const historiqueRPE = [chargeData.compteur_echecs > 0 ? 9 : 7];
+    const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs }).eq("id", chargeData.id);
     if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige); }
+    if (resultat.plateau_detecte || resultat.deload_suggere) {
+      setMessage(`⚠ ${resultat.deload_suggere ? "Semaine allégée recommandée" : "Plateau détecté"}`);
+      setTimeout(() => setMessage(""), 4000);
+    }
   };
 
   const sauverSeance = async () => {
@@ -156,6 +162,12 @@ export default function SeancePage() {
             {saving ? "Sauvegarde…" : "Terminer"}
           </button>
         </header>
+
+        {message && (
+          <div className="card p-3 text-sm font-semibold text-center animate-fade-in" style={{ color: "var(--color-gymx-accent)" }}>
+            {message}
+          </div>
+        )}
 
         {exercices.length === 0 && (<div className="card p-6 text-center"><p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>Aucun exercice pour aujourd&apos;hui.</p></div>)}
 
@@ -210,7 +222,7 @@ export default function SeancePage() {
                 </p>
                 <div className="flex gap-1 overflow-x-auto pb-1 overscroll-contain" style={{ touchAction: "pan-x" }}>
                   {rpeLabels.map((r) => (
-                    <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
+                    <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe), r.rpe)}
                       className="flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl border touch-target shrink-0"
                       style={{ minHeight: 48, minWidth: 36, borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)" }}>
                       <span className="w-5 h-1 rounded-full" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />

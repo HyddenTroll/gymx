@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculerProgression } from "./engine";
+import { calculerProgression, calculerProgressionRPE } from "./engine";
 import type { Cran, Niveau, ExerciceConfig } from "@/types";
 
 function config(
@@ -22,8 +22,8 @@ describe("calculerProgression", () => {
       ["facile", 2],
       ["ca_passe", 1],
       ["dur", 0],
-      ["a_la_limite", 0],
-      ["impossible", -2],
+      ["a_la_limite", -1],
+      ["impossible", -1],
     ] as [Cran, number][])("%s → %d incréments", (cran, expected) => {
       const result = calculerProgression(cran, niveau, config(), 50);
       expect(result.increment_count).toBe(expected);
@@ -38,7 +38,7 @@ describe("calculerProgression", () => {
       ["ca_passe", 2],
       ["dur", 1],
       ["a_la_limite", 0],
-      ["impossible", -2],
+      ["impossible", 0],
     ] as [Cran, number][])("%s → %d incréments", (cran, expected) => {
       const result = calculerProgression(cran, niveau, config(), 50);
       expect(result.increment_count).toBe(expected);
@@ -69,20 +69,20 @@ describe("calculerProgression", () => {
       expect(result.nouvelle_charge).toBe(10);
     });
 
-    it("impossible → -2 reps", () => {
+    it("impossible → -1 rep", () => {
       const result = calculerProgression("impossible", "intermediaire", config({ unite: "reps", pas: 1 }), 8);
-      expect(result.nouvelle_charge).toBe(6);
+      expect(result.nouvelle_charge).toBe(7);
     });
   });
 
   describe("sens inverse (assistance) — §5.5", () => {
-    it("facile → réduit l'assistance (-pas)", () => {
+    it("facile → réduit l'assistance (-1 pas)", () => {
       const result = calculerProgression("facile", "intermediaire", config({ sens: "inverse", pas: 2 }), 20);
-      expect(result.increment_count).toBe(-2);
-      expect(result.nouvelle_charge).toBe(16);
+      expect(result.increment_count).toBe(-1);
+      expect(result.nouvelle_charge).toBe(18);
     });
 
-    it("impossible → augmente l'assistance (+pas)", () => {
+    it("impossible → augmente l'assistance (+2 pas)", () => {
       const result = calculerProgression("impossible", "intermediaire", config({ sens: "inverse", pas: 2 }), 20);
       expect(result.increment_count).toBe(2);
       expect(result.nouvelle_charge).toBe(24);
@@ -90,22 +90,61 @@ describe("calculerProgression", () => {
   });
 
   describe("deload — §5.5 + §5.6", () => {
-    it("premier impossible → deload -2, compteur = 1", () => {
+    it("premier impossible → deload -1, compteur = 1", () => {
       const result = calculerProgression("impossible", "intermediaire", config({ compteur_echecs: 0 }), 50);
-      expect(result.nouvelle_charge).toBe(45);
+      expect(result.nouvelle_charge).toBe(47.5);
       expect(result.nouveau_compteur_echecs).toBe(1);
       expect(result.deload).toBe(true);
     });
 
-    it("deuxième impossible consécutif → deload -2, compteur = 2", () => {
+    it("deuxième impossible consécutif → deload -1, compteur = 2", () => {
       const result = calculerProgression("impossible", "intermediaire", config({ compteur_echecs: 1 }), 45);
-      expect(result.nouvelle_charge).toBe(40);
+      expect(result.nouvelle_charge).toBe(42.5);
       expect(result.nouveau_compteur_echecs).toBe(2);
     });
 
     it("facile reset le compteur à 0", () => {
       const result = calculerProgression("facile", "intermediaire", config({ compteur_echecs: 2 }), 40);
       expect(result.nouveau_compteur_echecs).toBe(0);
+    });
+  });
+
+  describe("calculerProgressionRPE — continu 1-10", () => {
+    it("RPE 1 → ~+3 incréments", () => {
+      const result = calculerProgressionRPE(1, "intermediaire", config(), 50);
+      expect(result.increment_count).toBeGreaterThanOrEqual(2);
+    });
+
+    it("RPE 10 → incrément négatif", () => {
+      const result = calculerProgressionRPE(10, "intermediaire", config(), 50);
+      expect(result.increment_count).toBeLessThan(0);
+    });
+
+    it("RPE 7 → 0 ou proche", () => {
+      const result = calculerProgressionRPE(7, "intermediaire", config(), 50);
+      expect(result.increment_count).toBeGreaterThanOrEqual(-1);
+      expect(result.increment_count).toBeLessThanOrEqual(1);
+    });
+
+    it("historique facile → bonus incrément", () => {
+      const result = calculerProgressionRPE(4, "intermediaire", config(), 50, [3, 4, 3]);
+      expect(result.increment_count).toBeGreaterThan(0);
+    });
+
+    it("plateau détecté si RPE monte sans progression", () => {
+      const result = calculerProgressionRPE(9, "intermediaire", config(), 50, [6, 8, 9]);
+      expect(result.plateau_detecte).toBe(true);
+    });
+
+    it("deload suggéré si 2× RPE ≥ 9", () => {
+      const result = calculerProgressionRPE(9, "intermediaire", config(), 50, [9, 9]);
+      expect(result.deload_suggere).toBe(true);
+    });
+
+    it("débutant reçoit plus d'incrément qu'intermédiaire au même RPE", () => {
+      const inter = calculerProgressionRPE(6, "intermediaire", config(), 50);
+      const debut = calculerProgressionRPE(6, "debutant", config(), 50);
+      expect(debut.increment_count).toBeGreaterThanOrEqual(inter.increment_count);
     });
   });
 

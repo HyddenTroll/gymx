@@ -226,8 +226,9 @@ export default function QGPage() {
             <p className="label">Projections <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(rythme estimé)</span></p>
             {projections.map((p, i) => {
               const tendanceIcon = p.tendance === "hausse" ? "↗" : p.tendance === "baisse" ? "↘" : "→";
+              const fiabiliteColor = p.fiabilite === "elevee" ? "var(--color-gymx-muted)" : p.fiabilite === "moyenne" ? "var(--color-gymx-accent)" : "var(--color-gymx-accent)";
               return (
-                <div key={i} className="space-y-1.5">
+                <div key={i} className="space-y-1.5 border-b pb-2" style={{ borderColor: "var(--color-gymx-border)" }}>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1.5">
                       <span style={{ color: "var(--color-gymx-muted)" }}>{p.nom}</span>
@@ -235,20 +236,32 @@ export default function QGPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono" style={{ fontFamily: "var(--font-mono)", color: "var(--color-gymx-text)" }}>{p.charge_actuelle} kg</span>
-                      <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{tendanceIcon} {p.taux_hebdo}/sem</span>
+                      <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{tendanceIcon} {p.taux_ema > 0 ? p.taux_ema : p.taux_hebdo}/sem</span>
                     </div>
                   </div>
                   <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min((p.projection_8sem / (p.charge_actuelle * 2)) * 100, 100)}%`, backgroundColor: "var(--color-gymx-fill-strong)" }} />
+                    <div className="h-full rounded-full" style={{ width: `${Math.min((p.projection_8sem / (p.charge_actuelle * 2)) * 100, 100)}%`, backgroundColor: p.tendance === "hausse" ? "var(--color-gymx-accent)" : "var(--color-gymx-fill-strong)" }} />
                   </div>
-                  <div className="flex justify-between text-xs" style={{ color: "var(--color-gymx-muted)" }}>
+                  <div className="flex justify-between text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>
                     <span>Maintenant · {p.charge_actuelle} kg</span>
                     <span>4 sem · {p.projection_4sem} kg</span>
                     <span>8 sem · {p.projection_8sem} kg</span>
                   </div>
+                  <div className="flex justify-between text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
+                    <span>Optimiste : {p.proj_optimiste} kg</span>
+                    <span>Pessimiste : {p.proj_pessimiste} kg</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="font-semibold" style={{ color: fiabiliteColor }}>
+                      Fiabilité : {p.fiabilite === "elevee" ? "Élevée" : p.fiabilite === "moyenne" ? "Moyenne" : "Faible"}
+                    </span>
+                    <span className="text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
+                      EMA : {p.taux_ema} kg/sem
+                    </span>
+                  </div>
                   {p.alerte_deload && (
                     <p className="text-xs font-semibold" style={{ color: "var(--color-gymx-accent)" }}>
-                      ⚠ Semaine allégée (deload) recommandée — échecs répétés
+                      ⚠ Semaine allégée recommandée — RPE élevé constant
                     </p>
                   )}
                   {p.alerte_plateau && !p.alerte_deload && (

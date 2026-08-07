@@ -24,8 +24,8 @@ export async function faireRotation(
 
   if (!pool || pool.length <= 1) return null;
 
-  const ids = pool.map((p) => p.exercice_id);
-  const autres = ids.filter((id) => id !== exerciceActuelId);
+  const ids = pool.map((p: any) => p.exercice_id);
+  const autres = ids.filter((id: string) => id !== exerciceActuelId);
 
   if (autres.length === 0) return null;
 

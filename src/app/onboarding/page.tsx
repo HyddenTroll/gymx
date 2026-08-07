@@ -91,12 +91,12 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (step === "exclus" && exercices.length === 0) {
-      supabase.from("exercices").select("id, nom_fr, groupe, image_url").order("groupe").order("nom_fr").then(({ data }) => {
+      supabase.from("exercices").select("id, nom_fr, groupe, image_url").order("groupe").order("nom_fr").then(({ data }: any) => {
         if (data) setExercices(data);
       });
     }
     if (step === "charges" && chargesExos.length === 0) {
-      supabase.from("exercices").select("id, nom_fr, groupe, role, unite_par_defaut").eq("role", "principal").order("groupe").then(({ data }) => {
+      supabase.from("exercices").select("id, nom_fr, groupe, role, unite_par_defaut").eq("role", "principal").order("groupe").then(({ data }: any) => {
         if (data) setChargesExos(data);
       });
     }
@@ -141,14 +141,17 @@ export default function OnboardingPage() {
 
       const { error: profilError } = await supabase
         .from("profil")
-        .upsert({ user_id: user.id, ...profil });
+        .upsert({ user_id: user.id, ...profil }, { onConflict: "user_id" });
 
       if (profilError) throw profilError;
 
       if (state.exclus.length > 0) {
         const { error: exclError } = await supabase
           .from("exercices_exclus")
-          .insert(state.exclus.map((id) => ({ user_id: user.id, exercice_id: id })));
+          .upsert(
+            state.exclus.map((id) => ({ user_id: user.id, exercice_id: id })),
+            { onConflict: "user_id,exercice_id" }
+          );
 
         if (exclError) throw exclError;
       }
@@ -166,7 +169,7 @@ export default function OnboardingPage() {
               pas: exo.pas_par_defaut,
               sens: exo.assist_inverse ? "inverse" : "normal",
               compteur_echecs: 0,
-            });
+            }, { onConflict: "user_id,exercice_id" });
           }
         }
       }

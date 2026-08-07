@@ -131,7 +131,7 @@ export async function getEffortMoyen() {
   if (!data || data.length === 0) return { moyenne: 0, total: 0, trop_dur: false };
 
   const recent = data.slice(0, 10);
-  const avg = recent.reduce((sum, e: any) => sum + e.valeur, 0) / recent.length;
+  const avg = recent.reduce((sum: number, e: any) => sum + e.valeur, 0) / recent.length;
 
   const hardCount = data.filter((e: any) => e.valeur >= 9).length;
 

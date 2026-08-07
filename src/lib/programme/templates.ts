@@ -3,14 +3,23 @@ import type { Niveau, Objectif, Materiel } from "@/types";
 export interface ProgrammeTemplate {
   id: string;
   nom: string;
-  description: string;
+  auteur: string;
+  description_courte: string;
+  description_longue: string;
+  pour_qui: string;
+  pas_pour_qui: string;
+  progression: string;
   duree_semaines: number;
   jours_par_semaine: number;
   niveau_min: Niveau;
+  niveau_max: Niveau;
   objectifs: Objectif[];
   materiel: Materiel[];
+  popularite: number; // 1-10
+  tags: string[];
   structure: {
     jour: number;
+    nom_jour?: string;
     exercices: { slug: string; series: number; reps: number; role: "principal" | "accessoire" }[];
   }[];
 }
@@ -19,426 +28,367 @@ export const PROGRAMMES_TEMPLATES: ProgrammeTemplate[] = [
   {
     id: "starting-strength",
     nom: "Starting Strength",
-    description: "Programme débutant 3×5, 3 jours/semaine. Squat, couché, SDT à chaque séance.",
+    auteur: "Mark Rippetoe",
+    description_courte: "3×5, 3 jours/semaine. Squat à chaque séance. Le programme débutant force de référence.",
+    description_longue: "Le programme de force pour débutant le plus répandu au monde. Conçu par Mark Rippetoe, Starting Strength est basé sur 3 mouvements fondamentaux (squat, développé couché, soulevé de terre) exécutés en 3 séries de 5 répétitions, 3 fois par semaine. La progression est linéaire : on ajoute du poids à chaque séance tant que la technique tient. Pas de fioritures, pas d'isolation — juste les mouvements qui marchent.",
+    pour_qui: "Débutants stricts (moins de 6 mois d'entraînement sérieux) qui ont accès à une barre olympique et un banc. Objectif : construire une base de force solide.",
+    pas_pour_qui: "Intermédiaires et avancés (la progression linéaire s'arrête). Personnes sans accès à une barre complète. Objectifs purement hypertrophie ou full body sans squat.",
+    progression: "Ajout de charge à chaque séance (2,5 kg). Quand tu bloques 3 séances de suite → deload puis passage en cycle intermédiaire.",
     duree_semaines: 12,
     jours_par_semaine: 3,
     niveau_min: "debutant",
+    niveau_max: "intermediaire",
     objectifs: ["force"],
     materiel: ["salle"],
+    popularite: 10,
+    tags: ["force", "linéaire", "débutant", "barre"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "developpe_militaire_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "rowing_barre", series: 3, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
-        ],
-      },
+      { jour: 1, nom_jour: "Jour A", exercices: [
+        { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
+      ]},
+      { jour: 2, nom_jour: "Jour B", exercices: [
+        { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "developpe_militaire_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "rowing_barre", series: 3, reps: 5, role: "principal" },
+      ]},
+      { jour: 3, nom_jour: "Jour A", exercices: [
+        { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
+      ]},
     ],
   },
   {
     id: "stronglifts-5x5",
     nom: "StrongLifts 5×5",
-    description: "5 séries de 5 reps, 3 jours/semaine. Progression linéaire simple.",
+    auteur: "Mehdi Hadim",
+    description_courte: "5×5, 3 jours/semaine. Plus de volume que SS, idem progression linéaire. Simple et efficace.",
+    description_longue: "Variante populaire de Starting Strength créée par Mehdi Hadim. Mêmes principes (progression linéaire, 3 jours, mouvements composés) mais avec 5 séries de 5 au lieu de 3×5, ce qui donne plus de volume d'entraînement. L'application StrongLifts a rendu ce programme célèbre. Le squat est aussi présent à chaque séance. Le soulevé de terre reste en 1×5 car très éprouvant.",
+    pour_qui: "Débutants qui veulent plus de volume que Starting Strength. Personnes qui préfèrent une approche très cadrée avec une app dédiée.",
+    pas_pour_qui: "Débutants qui récupèrent mal (5×5 c'est plus de volume que 3×5). Personnes sans barre olympique.",
+    progression: "Ajout de charge à chaque séance. Si tu bloques 3 fois au même poids → deload -20% et remonte.",
     duree_semaines: 12,
     jours_par_semaine: 3,
     niveau_min: "debutant",
+    niveau_max: "intermediaire",
     objectifs: ["force"],
     materiel: ["salle"],
+    popularite: 9,
+    tags: ["force", "linéaire", "débutant", "volume"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 5, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 5, reps: 5, role: "principal" },
-          { slug: "rowing_barre", series: 5, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "squat_barre", series: 5, reps: 5, role: "principal" },
-          { slug: "developpe_militaire_barre", series: 5, reps: 5, role: "principal" },
-          { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "squat_barre", series: 5, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 5, reps: 5, role: "principal" },
-          { slug: "rowing_barre", series: 5, reps: 5, role: "principal" },
-        ],
-      },
+      { jour: 1, nom_jour: "Jour A", exercices: [
+        { slug: "squat_barre", series: 5, reps: 5, role: "principal" },
+        { slug: "developpe_couche_barre", series: 5, reps: 5, role: "principal" },
+        { slug: "rowing_barre", series: 5, reps: 5, role: "principal" },
+      ]},
+      { jour: 2, nom_jour: "Jour B", exercices: [
+        { slug: "squat_barre", series: 5, reps: 5, role: "principal" },
+        { slug: "developpe_militaire_barre", series: 5, reps: 5, role: "principal" },
+        { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
+      ]},
+      { jour: 3, nom_jour: "Jour A", exercices: [
+        { slug: "squat_barre", series: 5, reps: 5, role: "principal" },
+        { slug: "developpe_couche_barre", series: 5, reps: 5, role: "principal" },
+        { slug: "rowing_barre", series: 5, reps: 5, role: "principal" },
+      ]},
     ],
   },
   {
     id: "full-body-muscle",
-    nom: "Full Body Prise de muscle",
-    description: "Full body 3×/semaine, volume modéré pour l'hypertrophie.",
+    nom: "Full Body Prise de Muscle",
+    auteur: "GYMX",
+    description_courte: "3 jours/semaine, 8-12 reps, volume modéré. Hypertrophie sans junk volume.",
+    description_longue: "Programme full body orienté hypertrophie conçu pour GYMX. 3 séances par semaine couvrant l'ensemble du corps avec un volume modéré (3 séries par exercice, 8-12 reps). L'objectif est de stimuler chaque muscle 3 fois par semaine sans accumuler de fatigue inutile. Les mouvements composés sont en tête de séance, l'isolation en fin de séance. Idéal pour ceux qui ne peuvent pas s'entraîner plus de 3 fois par semaine.",
+    pour_qui: "Personnes avec 3 jours disponibles par semaine. Objectif prise de muscle. Débutants comme intermédiaires.",
+    pas_pour_qui: "Objectif force max (trop de répétitions). Plus de 4 jours disponibles (mieux vaut un split).",
+    progression: "Ajout de charge quand tu atteins 12 reps sur les 3 séries. Sinon, reste au même poids et cherche à battre ton nombre de reps.",
     duree_semaines: 8,
     jours_par_semaine: 3,
     niveau_min: "debutant",
+    niveau_max: "avance",
     objectifs: ["muscle", "recomposition"],
-    materiel: ["salle"],
+    materiel: ["salle", "halteres"],
+    popularite: 7,
+    tags: ["hypertrophie", "full body", "3 jours", "modéré"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "developpe_couche_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "rowing_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "developpe_militaire_barre", series: 3, reps: 10, role: "accessoire" },
-          { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "souleve_de_terre_roumain", series: 3, reps: 8, role: "principal" },
-          { slug: "developpe_incline_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 8, role: "principal" },
-          { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_marteau", series: 3, reps: 12, role: "accessoire" },
-          { slug: "barre_au_front", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "presse_a_cuisses", series: 3, reps: 8, role: "principal" },
-          { slug: "developpe_militaire_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "rowing_haltere", series: 3, reps: 8, role: "principal" },
-          { slug: "ecarte_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "oiseau_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
+      { jour: 1, nom_jour: "Full Body A", exercices: [
+        { slug: "squat_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "developpe_couche_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "rowing_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "developpe_militaire_barre", series: 3, reps: 10, role: "accessoire" },
+        { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 2, nom_jour: "Full Body B", exercices: [
+        { slug: "souleve_de_terre_roumain", series: 3, reps: 8, role: "principal" },
+        { slug: "developpe_incline_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 8, role: "principal" },
+        { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_marteau", series: 3, reps: 12, role: "accessoire" },
+        { slug: "barre_au_front", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 3, nom_jour: "Full Body C", exercices: [
+        { slug: "presse_a_cuisses", series: 3, reps: 8, role: "principal" },
+        { slug: "developpe_militaire_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "rowing_haltere", series: 3, reps: 8, role: "principal" },
+        { slug: "ecarte_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "oiseau_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+      ]},
     ],
   },
   {
     id: "gzclp",
     nom: "GZCLP",
-    description: "Progression linéaire 4 jours, heavy/light. Idéal intermédiaire.",
+    auteur: "Cody Lefever (Reddit /r/gzcl)",
+    description_courte: "4 jours, progression par paliers. Heavy/light, idéal pour passer débutant → intermédiaire.",
+    description_longue: "Créé par Cody Lefever sur Reddit, GZCLP est un système de progression qui combine force et hypertrophie. Le principe : un mouvement principal en 5×3 (lourd), un mouvement complémentaire en 3×10 (modéré), et des accessoires en 3×15+ (volume). Quand tu bloques sur le 5×3, tu passes en 6×2 puis en 10×1. Quand tu bloques partout, tu changes de mouvement principal. Très flexible et personnalisable.",
+    pour_qui: "Débutants avancés qui commencent à stagner sur du linéaire. Intermédiaires qui veulent un cadre flexible mêlant force et volume.",
+    pas_pour_qui: "Débutants stricts (mieux vaut SS/SL). Avancés qui ont besoin de cycles spécialisés.",
+    progression: "Progression par paliers : 5×3 → 6×2 → 10×1 en montant de charge. Quand les 10×1 bloquent → change de mouvement et reprends au début.",
     duree_semaines: 12,
     jours_par_semaine: 4,
     niveau_min: "intermediaire",
+    niveau_max: "avance",
     objectifs: ["force", "muscle"],
     materiel: ["salle"],
+    popularite: 8,
+    tags: ["force", "hypertrophie", "4 jours", "flexible"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 5, reps: 3, role: "principal" },
-          { slug: "developpe_couche_barre", series: 3, reps: 10, role: "principal" },
-          { slug: "rowing_barre", series: 3, reps: 15, role: "accessoire" },
-          { slug: "curl_barre", series: 3, reps: 15, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "developpe_militaire_barre", series: 5, reps: 3, role: "principal" },
-          { slug: "souleve_de_terre", series: 3, reps: 10, role: "principal" },
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 15, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 15, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 10, role: "principal" },
-          { slug: "developpe_couche_barre", series: 5, reps: 3, role: "principal" },
-          { slug: "rowing_haltere", series: 3, reps: 15, role: "accessoire" },
-          { slug: "curl_marteau", series: 3, reps: 15, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 4,
-        exercices: [
-          { slug: "developpe_militaire_barre", series: 3, reps: 10, role: "principal" },
-          { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
-          { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 15, role: "accessoire" },
-          { slug: "barre_au_front", series: 3, reps: 15, role: "accessoire" },
-        ],
-      },
+      { jour: 1, nom_jour: "Heavy A", exercices: [
+        { slug: "squat_barre", series: 5, reps: 3, role: "principal" },
+        { slug: "developpe_couche_barre", series: 3, reps: 10, role: "principal" },
+        { slug: "rowing_barre", series: 3, reps: 15, role: "accessoire" },
+        { slug: "curl_barre", series: 3, reps: 15, role: "accessoire" },
+      ]},
+      { jour: 2, nom_jour: "Heavy B", exercices: [
+        { slug: "developpe_militaire_barre", series: 5, reps: 3, role: "principal" },
+        { slug: "souleve_de_terre", series: 3, reps: 10, role: "principal" },
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 15, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 15, role: "accessoire" },
+      ]},
+      { jour: 3, nom_jour: "Light A", exercices: [
+        { slug: "squat_barre", series: 3, reps: 10, role: "principal" },
+        { slug: "developpe_couche_barre", series: 5, reps: 3, role: "principal" },
+        { slug: "rowing_haltere", series: 3, reps: 15, role: "accessoire" },
+        { slug: "curl_marteau", series: 3, reps: 15, role: "accessoire" },
+      ]},
+      { jour: 4, nom_jour: "Light B", exercices: [
+        { slug: "developpe_militaire_barre", series: 3, reps: 10, role: "principal" },
+        { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
+        { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 15, role: "accessoire" },
+        { slug: "barre_au_front", series: 3, reps: 15, role: "accessoire" },
+      ]},
     ],
   },
   {
     id: "phul",
-    nom: "PHUL",
-    description: "Power Hypertrophy Upper Lower. 4 jours : force + volume.",
+    nom: "PHUL — Power Hypertrophy Upper Lower",
+    auteur: "Communauté fitness (Bodybuilding.com)",
+    description_courte: "4 jours : 2 jours force (haut+bas) + 2 jours hypertrophie (haut+bas). Le best-of des deux mondes.",
+    description_longue: "PHUL combine le meilleur de la force et de l'hypertrophie dans un split 4 jours. Les deux premiers jours sont dédiés à la force (5 reps, repos long), les deux suivants à l'hypertrophie (8-12 reps, volume plus élevé). C'est un programme très populaire car il permet de progresser en force tout en développant du muscle. Chaque muscle est travaillé 2 fois par semaine : une fois lourd, une fois volume.",
+    pour_qui: "Intermédiaires avec 4 jours disponibles. Ceux qui veulent gagner en force et en muscle simultanément.",
+    pas_pour_qui: "Débutants stricts (trop d'exercices). Avancés qui ont besoin de plus de spécialisation.",
+    progression: "Ajout de charge quand tu atteins tes reps cibles sur le mouvement lourd. Pour l'hypertrophie, cherche à augmenter le poids ou les répétitions chaque semaine.",
     duree_semaines: 8,
     jours_par_semaine: 4,
     niveau_min: "intermediaire",
+    niveau_max: "avance",
     objectifs: ["force", "muscle"],
     materiel: ["salle"],
+    popularite: 8,
+    tags: ["force", "hypertrophie", "4 jours", "upper lower", "split"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 4, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 4, reps: 5, role: "principal" },
-          { slug: "rowing_barre", series: 4, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "developpe_militaire_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "souleve_de_terre", series: 3, reps: 5, role: "principal" },
-          { slug: "tractions", series: 3, reps: 8, role: "principal" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "presse_a_cuisses", series: 3, reps: 10, role: "principal" },
-          { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
-          { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
-          { slug: "developpe_incline_barre", series: 3, reps: 10, role: "principal" },
-          { slug: "ecarte_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 4,
-        exercices: [
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 12, role: "principal" },
-          { slug: "rowing_haltere", series: 3, reps: 12, role: "principal" },
-          { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "oiseau_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
+      { jour: 1, nom_jour: "Haut Force", exercices: [
+        { slug: "developpe_couche_barre", series: 4, reps: 5, role: "principal" },
+        { slug: "developpe_incline_barre", series: 3, reps: 8, role: "accessoire" },
+        { slug: "rowing_barre", series: 4, reps: 5, role: "principal" },
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 8, role: "accessoire" },
+      ]},
+      { jour: 2, nom_jour: "Bas Force", exercices: [
+        { slug: "squat_barre", series: 4, reps: 5, role: "principal" },
+        { slug: "souleve_de_terre", series: 3, reps: 5, role: "principal" },
+        { slug: "leg_curl_allonge", series: 3, reps: 8, role: "accessoire" },
+        { slug: "mollets_debout_machine", series: 3, reps: 10, role: "accessoire" },
+      ]},
+      { jour: 3, nom_jour: "Haut Volume", exercices: [
+        { slug: "developpe_couche_halteres", series: 3, reps: 10, role: "principal" },
+        { slug: "ecarte_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 10, role: "principal" },
+        { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 4, nom_jour: "Bas Volume", exercices: [
+        { slug: "presse_a_cuisses", series: 3, reps: 10, role: "principal" },
+        { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
+        { slug: "leg_curl_asssis", series: 3, reps: 12, role: "accessoire" },
+        { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
+        { slug: "mollets_assis", series: 4, reps: 12, role: "accessoire" },
+      ]},
     ],
   },
   {
     id: "ppl",
-    nom: "Push Pull Legs",
-    description: "Split 6 jours : Push, Pull, Legs. Le standard Reddit.",
+    nom: "Push Pull Legs (Reddit PPL)",
+    auteur: "r/Fitness (Metallicadpa)",
+    description_courte: "6 jours : Push / Pull / Legs ×2. Le standard Reddit pour l'hypertrophie. Volume élevé.",
+    description_longue: "Le programme PPL le plus populaire de Reddit, créé par Metallicadpa. C'est un split 6 jours qui alterne Push (pectoraux, épaules, triceps), Pull (dos, biceps) et Legs (quadriceps, ischios, mollets). Chaque muscle est travaillé 2 fois par semaine avec un volume conséquent. Très efficace pour l'hypertrophie, mais demande du temps (6 séances/semaine) et une bonne récupération.",
+    pour_qui: "Personnes avec 6 jours disponibles. Objectif hypertrophie. Niveau intermédiaire ou avancé.",
+    pas_pour_qui: "Moins de 5 jours disponibles. Débutants (trop de volume). Objectif force max uniquement.",
+    progression: "Ajout de charge quand tu atteins tes reps cibles. Pour les accessoires, double progression : d'abord augmenter les reps, puis le poids, puis recommencer.",
     duree_semaines: 8,
     jours_par_semaine: 6,
     niveau_min: "intermediaire",
+    niveau_max: "avance",
     objectifs: ["muscle", "force"],
     materiel: ["salle"],
+    popularite: 10,
+    tags: ["hypertrophie", "6 jours", "split", "volume élevé"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "developpe_couche_barre", series: 4, reps: 5, role: "principal" },
-          { slug: "developpe_incline_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "developpe_militaire_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "barre_au_front", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
-          { slug: "rowing_barre", series: 4, reps: 8, role: "principal" },
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "principal" },
-          { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 10, role: "accessoire" },
-          { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_marteau", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "squat_barre", series: 4, reps: 5, role: "principal" },
-          { slug: "presse_a_cuisses", series: 3, reps: 10, role: "principal" },
-          { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
-          { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
-          { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
-          { slug: "mollets_debout_machine", series: 4, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 4,
-        exercices: [
-          { slug: "developpe_couche_barre", series: 4, reps: 8, role: "principal" },
-          { slug: "developpe_incline_halteres", series: 3, reps: 10, role: "principal" },
-          { slug: "ecarte_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "elevations_laterales_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "face_pull", series: 3, reps: 12, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 5,
-        exercices: [
-          { slug: "souleve_de_terre_roumain", series: 3, reps: 8, role: "principal" },
-          { slug: "rowing_haltere", series: 4, reps: 8, role: "principal" },
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "principal" },
-          { slug: "shrugs_barre", series: 3, reps: 12, role: "accessoire" },
-          { slug: "face_pull", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 6,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 8, role: "principal" },
-          { slug: "fentes_halteres", series: 3, reps: 10, role: "principal" },
-          { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
-          { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
-          { slug: "mollets_assis", series: 4, reps: 12, role: "accessoire" },
-        ],
-      },
+      { jour: 1, nom_jour: "Push 1", exercices: [
+        { slug: "developpe_couche_barre", series: 4, reps: 5, role: "principal" },
+        { slug: "developpe_incline_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "developpe_militaire_barre", series: 3, reps: 8, role: "principal" },
+        { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+        { slug: "barre_au_front", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 2, nom_jour: "Pull 1", exercices: [
+        { slug: "souleve_de_terre", series: 1, reps: 5, role: "principal" },
+        { slug: "rowing_barre", series: 4, reps: 8, role: "principal" },
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "principal" },
+        { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 10, role: "accessoire" },
+        { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_marteau", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 3, nom_jour: "Legs 1", exercices: [
+        { slug: "squat_barre", series: 4, reps: 5, role: "principal" },
+        { slug: "presse_a_cuisses", series: 3, reps: 10, role: "principal" },
+        { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
+        { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
+        { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
+        { slug: "mollets_debout_machine", series: 4, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 4, nom_jour: "Push 2", exercices: [
+        { slug: "developpe_couche_barre", series: 4, reps: 8, role: "principal" },
+        { slug: "developpe_incline_halteres", series: 3, reps: 10, role: "principal" },
+        { slug: "ecarte_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+        { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "face_pull", series: 3, reps: 12, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 5, nom_jour: "Pull 2", exercices: [
+        { slug: "souleve_de_terre_roumain", series: 3, reps: 8, role: "principal" },
+        { slug: "rowing_haltere", series: 4, reps: 8, role: "principal" },
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "principal" },
+        { slug: "shrugs_barre", series: 3, reps: 12, role: "accessoire" },
+        { slug: "face_pull", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 6, nom_jour: "Legs 2", exercices: [
+        { slug: "squat_avant", series: 3, reps: 8, role: "principal" },
+        { slug: "fentes_halteres", series: 3, reps: 10, role: "principal" },
+        { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
+        { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
+        { slug: "mollets_assis", series: 4, reps: 12, role: "accessoire" },
+      ]},
     ],
   },
   {
     id: "phat",
-    nom: "PHAT",
-    description: "Power Hypertrophy Adaptive Training. 5 jours, volume élevé.",
+    nom: "PHAT — Power Hypertrophy Adaptive Training",
+    auteur: "Layne Norton",
+    description_courte: "5 jours : 2 jours force + 3 jours hypertrophie. Pour avancés. Volume très élevé.",
+    description_longue: "Conçu par Dr. Layne Norton (docteur en nutrition, champion de powerlifting), PHAT est un programme hybride qui combine 2 jours de travail lourd (force) avec 3 jours de travail volumineux (hypertrophie). C'est l'un des programmes les plus complets mais aussi les plus exigeants. Chaque muscle est travaillé sous toutes les gammes de répétitions. Réservé aux avancés qui ont une excellente récupération.",
+    pour_qui: "Avancés avec 5 jours disponibles. Excellente récupération. Ceux qui veulent force ET hypertrophie au maximum.",
+    pas_pour_qui: "Débutants et intermédiaires (trop de volume). Moins de 5 jours. Récupération limitée.",
+    progression: "Force : ajout de charge quand les reps cibles sont atteintes. Hypertrophie : double progression (reps puis poids). Deload toutes les 6-8 semaines.",
     duree_semaines: 8,
     jours_par_semaine: 5,
     niveau_min: "avance",
+    niveau_max: "avance",
     objectifs: ["force", "muscle"],
     materiel: ["salle"],
+    popularite: 7,
+    tags: ["force", "hypertrophie", "5 jours", "avancé", "volume élevé"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "rowing_barre", series: 3, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "developpe_militaire_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "souleve_de_terre", series: 3, reps: 5, role: "principal" },
-          { slug: "tractions", series: 3, reps: 5, role: "principal" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "developpe_incline_halteres", series: 3, reps: 8, role: "principal" },
-          { slug: "ecarte_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "oiseau_halteres", series: 3, reps: 12, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 4,
-        exercices: [
-          { slug: "presse_a_cuisses", series: 3, reps: 10, role: "principal" },
-          { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
-          { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
-          { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
-          { slug: "mollets_debout_machine", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 5,
-        exercices: [
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "principal" },
-          { slug: "rowing_haltere", series: 3, reps: 10, role: "principal" },
-          { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "curl_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
-          { slug: "face_pull", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
+      { jour: 1, nom_jour: "Haut Force", exercices: [
+        { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "developpe_incline_barre", series: 3, reps: 6, role: "principal" },
+        { slug: "rowing_barre", series: 3, reps: 5, role: "principal" },
+      ]},
+      { jour: 2, nom_jour: "Bas Force", exercices: [
+        { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "souleve_de_terre", series: 3, reps: 5, role: "principal" },
+        { slug: "leg_curl_allonge", series: 3, reps: 8, role: "accessoire" },
+      ]},
+      { jour: 3, nom_jour: "Haut Hypertrophie", exercices: [
+        { slug: "developpe_incline_halteres", series: 3, reps: 8, role: "principal" },
+        { slug: "ecarte_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 10, role: "principal" },
+        { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "oiseau_halteres", series: 3, reps: 12, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_barre", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 4, nom_jour: "Bas Hypertrophie", exercices: [
+        { slug: "presse_a_cuisses", series: 3, reps: 10, role: "principal" },
+        { slug: "leg_extension", series: 3, reps: 12, role: "accessoire" },
+        { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
+        { slug: "souleve_de_terre_roumain", series: 3, reps: 10, role: "principal" },
+        { slug: "mollets_debout_machine", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 5, nom_jour: "Dos + Épaules Hypertrophie", exercices: [
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "principal" },
+        { slug: "rowing_haltere", series: 3, reps: 10, role: "principal" },
+        { slug: "tirage_horizontal_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+        { slug: "face_pull", series: 3, reps: 12, role: "accessoire" },
+        { slug: "curl_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+        { slug: "extension_a_la_poulie", series: 3, reps: 12, role: "accessoire" },
+      ]},
     ],
   },
   {
     id: "531-bbb",
     nom: "5/3/1 Boring But Big",
-    description: "Cycle 5/3/1 + BBB. 4 jours, force + volume accessoire.",
+    auteur: "Jim Wendler",
+    description_courte: "4 jours, cycles de 4 semaines. Force sur le mouvement principal, volume BBB 5×10 ensuite.",
+    description_longue: "Le programme 5/3/1 de Jim Wendler est l'un des plus respectés en force. Le principe : un cycle de 4 semaines (3 semaines de progression + 1 semaine de deload) sur les 4 mouvements majeurs (squat, couché, militaire, deadlift). La variante Boring But Big ajoute 5×10 du même mouvement après le travail lourd pour un énorme volume. La force progresse par micro-charges (le 1RM augmente à chaque cycle). C'est un programme pour la vie — Wendler lui-même l'utilise depuis 15 ans.",
+    pour_qui: "Intermédiaires et avancés. Ceux qui veulent une progression lente mais sûre. Ceux qui aiment les cycles structurés.",
+    pas_pour_qui: "Débutants (progression trop lente). Ceux qui veulent changer de mouvement souvent. Moins de 4 jours.",
+    progression: "Cycles de 4 semaines. Semaine 1 : 3×5, semaine 2 : 3×3, semaine 3 : 5/3/1, semaine 4 : deload. Le 1RM de référence augmente à chaque cycle.",
     duree_semaines: 4,
     jours_par_semaine: 4,
     niveau_min: "intermediaire",
+    niveau_max: "avance",
     objectifs: ["force", "muscle"],
     materiel: ["salle"],
+    popularite: 9,
+    tags: ["force", "cycles", "4 jours", "Wendler", "progressif"],
     structure: [
-      {
-        jour: 1,
-        exercices: [
-          { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "presse_a_cuisses", series: 5, reps: 10, role: "principal" },
-          { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 2,
-        exercices: [
-          { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "developpe_couche_barre", series: 5, reps: 10, role: "principal" },
-          { slug: "rowing_barre", series: 3, reps: 10, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 3,
-        exercices: [
-          { slug: "developpe_militaire_barre", series: 3, reps: 5, role: "principal" },
-          { slug: "developpe_militaire_barre", series: 5, reps: 10, role: "principal" },
-          { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
-        ],
-      },
-      {
-        jour: 4,
-        exercices: [
-          { slug: "souleve_de_terre", series: 3, reps: 5, role: "principal" },
-          { slug: "souleve_de_terre_roumain", series: 5, reps: 10, role: "principal" },
-          { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "accessoire" },
-        ],
-      },
+      { jour: 1, nom_jour: "Squat", exercices: [
+        { slug: "squat_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "presse_a_cuisses", series: 5, reps: 10, role: "principal" },
+        { slug: "leg_curl_allonge", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 2, nom_jour: "Couché", exercices: [
+        { slug: "developpe_couche_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "developpe_couche_barre", series: 5, reps: 10, role: "principal" },
+        { slug: "rowing_barre", series: 3, reps: 10, role: "accessoire" },
+      ]},
+      { jour: 3, nom_jour: "Militaire", exercices: [
+        { slug: "developpe_militaire_barre", series: 3, reps: 5, role: "principal" },
+        { slug: "developpe_militaire_barre", series: 5, reps: 10, role: "principal" },
+        { slug: "elevations_laterales_halteres", series: 3, reps: 12, role: "accessoire" },
+      ]},
+      { jour: 4, nom_jour: "Deadlift", exercices: [
+        { slug: "souleve_de_terre", series: 3, reps: 5, role: "principal" },
+        { slug: "souleve_de_terre_roumain", series: 5, reps: 10, role: "principal" },
+        { slug: "tirage_vertical_a_la_poulie", series: 3, reps: 10, role: "accessoire" },
+      ]},
     ],
   },
 ];
-
-export function scorerProgramme(
-  prog: ProgrammeTemplate,
-  niveau: Niveau,
-  objectif: Objectif,
-  jours: number,
-  materiel: Materiel
-): number {
-  let score = 0;
-
-  if (prog.jours_par_semaine === jours) score += 30;
-  else if (Math.abs(prog.jours_par_semaine - jours) === 1) score += 10;
-
-  if (prog.objectifs.includes(objectif)) score += 25;
-  else score += 5;
-
-  const niveauxOrdre: Record<Niveau, number> = { debutant: 0, intermediaire: 1, avance: 2 };
-  const progNiveau = niveauxOrdre[prog.niveau_min] ?? 0;
-  const userNiveau = niveauxOrdre[niveau];
-  if (progNiveau <= userNiveau) score += 20;
-  else score += 5;
-
-  if (prog.materiel.includes(materiel)) score += 15;
-  else if (materiel === "corps" && prog.materiel.includes("corps")) score += 15;
-  else score += 5;
-
-  if (prog.niveau_min === niveau) score += 10;
-
-  return score;
-}

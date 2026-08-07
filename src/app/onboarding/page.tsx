@@ -246,7 +246,7 @@ export default function OnboardingPage() {
                 <div className="space-y-3">
                   <div className="card p-4 space-y-2 border-gymx-accent">
                     <h3 className="card-title">{programmeChoisi.nom}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: Muted }}>{programmeChoisi.description}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: Muted }}>{programmeChoisi.description_courte}</p>
                     <div className="flex gap-2 pt-1">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: BgBg, color: Muted }}>{programmeChoisi.jours_par_semaine}j/sem</span>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: BgBg, color: Muted }}>{programmeChoisi.duree_semaines} sem</span>

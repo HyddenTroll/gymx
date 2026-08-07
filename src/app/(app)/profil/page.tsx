@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mettreAJourProfil, ajouterPoids, reintegrerExercice } from "@/lib/dashboard/projections";
 import { getPoidsCorps } from "@/lib/dashboard/dashboard-service";
-import { ArrowLeft, Weight, X } from "lucide-react";
+import { ArrowLeft, Weight, X, Dumbbell } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilPage() {
@@ -14,6 +14,7 @@ export default function ProfilPage() {
   const [profil, setProfil] = useState<any>(null);
   const [poids, setPoids] = useState<any[]>([]);
   const [exclus, setExclus] = useState<any[]>([]);
+  const [programme, setProgramme] = useState<any>(null);
   const [nouveauPoids, setNouveauPoids] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -40,6 +41,13 @@ export default function ProfilPage() {
         .select("*, exercice:exercice_id(nom_fr, groupe, image_url)")
         .eq("user_id", user.id);
       if (ex) setExclus(ex);
+
+      const { data: prog } = await supabase
+        .from("programme_actif")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (prog) setProgramme(prog);
     })();
   }, [router, supabase]);
 
@@ -217,6 +225,31 @@ export default function ProfilPage() {
               </div>
             ))
           )}
+        </div>
+
+        <div className="card p-4 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Dumbbell className="w-4 h-4" style={{ color: "var(--color-gymx-muted)" }} />
+            <p className="label">Programme en cours</p>
+          </div>
+          {programme ? (
+            <div className="space-y-1">
+              <p className="font-semibold text-sm">{programme.nom}</p>
+              <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
+                Semaine {programme.semaine_courante} / {programme.longueur_bloc} · {programme.jours_par_semaine}j/sem
+              </p>
+              <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
+                Démarré le {new Date(programme.date_debut).toLocaleDateString("fr-FR")}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>Aucun programme actif.</p>
+          )}
+          <Link href="/programmes"
+            className="block w-full text-center py-2.5 rounded-xl text-sm font-semibold touch-target mt-1"
+            style={{ backgroundColor: "var(--color-gymx-fill)", color: "var(--color-gymx-text)" }}>
+            {programme ? "Changer de programme" : "Choisir un programme"}
+          </Link>
         </div>
 
         <button onClick={handleSignOut}

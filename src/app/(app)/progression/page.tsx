@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPoidsCorps, getForceMax } from "@/lib/dashboard/dashboard-service";
-import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp } from "lucide-react";
+import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [

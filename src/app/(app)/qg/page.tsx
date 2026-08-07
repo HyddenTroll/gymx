@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, Settings } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, Settings } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [

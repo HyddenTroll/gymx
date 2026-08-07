@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Search, BarChart3, Dumbbell, Library, TrendingUp } from "lucide-react";
+import { Search, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
 import Link from "next/link";
 
 const groupes = ["Pectoraux", "Épaules", "Dos", "Quadriceps", "Ischios/Fessiers", "Biceps", "Triceps", "Mollets", "Abdos"];

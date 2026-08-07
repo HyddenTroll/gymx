@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculerProgression } from "@/lib/progression/engine";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
-import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp } from "lucide-react";
+import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
 import type { Cran, Exercice } from "@/types";
 import Link from "next/link";
 

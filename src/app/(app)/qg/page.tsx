@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
+import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, Settings } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
@@ -23,6 +24,7 @@ export default function QGPage() {
   const [poidsCorps, setPoidsCorps] = useState<any[]>([]);
   const [gamification, setGamification] = useState<any>(null);
   const [profil, setProfil] = useState<any>(null);
+  const [projections, setProjections] = useState<Projection[]>([]);
   const [loading, setLoading] = useState(true);
   const pathname = "/qg";
 
@@ -38,6 +40,8 @@ export default function QGPage() {
         if (g) setGamification(g);
         const { data: p } = await supabase.from("profil").select("*").eq("user_id", user.id).maybeSingle();
         if (p) setProfil(p);
+        const projs = await calculerProjections(user.id);
+        setProjections(projs);
       }
       setLoading(false);
     })();
@@ -58,21 +62,22 @@ export default function QGPage() {
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
         <header className="flex items-start justify-between">
           <div>
-            <h1 className="card-title" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "17px", color: "var(--color-gymx-text)" }}>QG</h1>
-            <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-gymx-muted)" }}>
-              Tableau de bord
-            </p>
+            <h1 className="card-title">QG</h1>
+            <p className="label">Tableau de bord</p>
           </div>
-          {profil && (
-            <div className="text-right">
-              <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-gymx-muted)" }}>
-                {profil.niveau}
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--color-gymx-muted)" }}>
-                {profil.objectif === "force" ? "Force" : profil.objectif === "muscle" ? "Hypertrophie" : "Recomposition"} · {profil.jours_par_semaine}j/sem
-              </p>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Link href="/profil" className="p-2 -mr-2 touch-target">
+              <Settings className="w-5 h-5" style={{ color: "var(--color-gymx-muted)" }} />
+            </Link>
+            {profil && (
+              <div className="text-right">
+                <p className="label" style={{ fontSize: "10px" }}>{profil.niveau}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--color-gymx-muted)" }}>
+                  {profil.objectif === "force" ? "Force" : profil.objectif === "muscle" ? "Hypertrophie" : "Recomposition"} · {profil.jours_par_semaine}j/sem
+                </p>
+              </div>
+            )}
+          </div>
         </header>
 
         {gamification && (
@@ -215,6 +220,47 @@ export default function QGPage() {
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {projections.length > 0 && (
+          <div className="card p-4 space-y-3">
+            <p className="label">Projections <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(rythme estimé)</span></p>
+            {projections.map((p, i) => {
+              const tendanceIcon = p.tendance === "hausse" ? "↗" : p.tendance === "baisse" ? "↘" : "→";
+              return (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span style={{ color: "var(--color-gymx-muted)" }}>{p.nom}</span>
+                      {p.alerte_plateau && <AlertTriangle className="w-3.5 h-3.5" style={{ color: "var(--color-gymx-accent)" }} />}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono" style={{ fontFamily: "var(--font-mono)", color: "var(--color-gymx-text)" }}>{p.charge_actuelle} kg</span>
+                      <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{tendanceIcon} {p.taux_hebdo}/sem</span>
+                    </div>
+                  </div>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${Math.min((p.projection_8sem / (p.charge_actuelle * 2)) * 100, 100)}%`, backgroundColor: "var(--color-gymx-fill-strong)" }} />
+                  </div>
+                  <div className="flex justify-between text-xs" style={{ color: "var(--color-gymx-muted)" }}>
+                    <span>Maintenant · {p.charge_actuelle} kg</span>
+                    <span>4 sem · {p.projection_4sem} kg</span>
+                    <span>8 sem · {p.projection_8sem} kg</span>
+                  </div>
+                  {p.alerte_deload && (
+                    <p className="text-xs font-semibold" style={{ color: "var(--color-gymx-accent)" }}>
+                      ⚠ Semaine allégée (deload) recommandée — échecs répétés
+                    </p>
+                  )}
+                  {p.alerte_plateau && !p.alerte_deload && (
+                    <p className="text-xs" style={{ color: "var(--color-gymx-accent)" }}>
+                      Plateau détecté — envisage une semaine allégée
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

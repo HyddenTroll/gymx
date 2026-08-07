@@ -116,8 +116,10 @@ export async function calculerProjections(userId: string): Promise<Projection[]>
     const alertePlateau = tendance === "stable" && rpeMoyen >= 8;
     const alerteDeload = c.compteur_echecs >= 2 || (rpeMoyen >= 9 && rpeValues.length >= 2);
 
-    const projection4sem = Math.max(0, c.charge_actuelle + tauxAjuste * 4);
-    const projection8sem = Math.max(0, c.charge_actuelle + tauxAjuste * 8);
+    // Courbe logarithmique : progression rapide au debut, puis ralentit
+    const logCurve = (sem: number) => c.charge_actuelle + tauxAjuste * 4 * Math.log(sem + 1) / Math.log(5);
+    const projection4sem = Math.max(0, logCurve(4));
+    const projection8sem = Math.max(0, logCurve(8));
 
     // Intervalles de confiance : ± 1 écart-type sur les projections
     const incrementsStd = chargeHistory.length >= 2

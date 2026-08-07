@@ -1,11 +1,33 @@
 import { createClient } from "@/lib/supabase/client";
 
-/** Calcule le 1RM estimé avec Epley (≤12 reps) ou Brzycki */
+/** Calcule le 1RM estimé — Brzycki (<10 reps) ou Epley (≥10) */
 export function estimer1RM(charge: number, reps: number): number {
   if (reps <= 0 || charge <= 0) return 0;
   if (reps === 1) return charge;
+  if (reps < 10) return Math.round(charge * (36 / (37 - reps))); // Brzycki
   if (reps <= 12) return Math.round(charge * (1 + reps / 30)); // Epley
-  return charge; // >12 reps -> peu fiable, on garde la charge
+  return charge;
+}
+
+/** Coefficient de progression par exercice (certains exos progressent plus vite) */
+const COEFFS: Record<string, number> = {
+  squat_barre: 1.0, souleve_de_terre: 1.2, developpe_couche_barre: 0.8,
+  developpe_militaire_barre: 0.6, rowing_barre: 0.9, tractions: 0.7,
+};
+
+export function getCoeffExercice(slug: string): number {
+  return COEFFS[slug] || 1.0;
+}
+
+/** Suggère des séries d'échauffement */
+export function calculerEchauffement(charge: number, unite: string): { label: string; charge: number }[] {
+  if (charge <= 0 || unite === "reps") return [];
+  return [
+    { label: "Barre vide", charge: 20 },
+    { label: "50%", charge: Math.round(charge * 0.5 / 2.5) * 2.5 },
+    { label: "70%", charge: Math.round(charge * 0.7 / 2.5) * 2.5 },
+    { label: "90%", charge: Math.round(charge * 0.9 / 2.5) * 2.5 },
+  ].filter((s) => s.charge < charge);
 }
 
 export async function getForceMax() {

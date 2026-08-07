@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
+import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSousRegion } from "@/lib/dashboard/analytics";
 import { createClient } from "@/lib/supabase/client";
 import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
@@ -36,6 +37,9 @@ export default function QGPage() {
   const [programmeActif, setProgrammeActif] = useState<any>(null);
   const [cycleInfo, setCycleInfo] = useState<any>(null);
   const [deloading, setDeloading] = useState(false); const [message, setMessage] = useState("");
+  const [pushPull, setPushPull] = useState<any>(null);
+  const [intensite, setIntensite] = useState<any>(null);
+  const [pointsFaibles, setPointsFaibles] = useState<any[]>([]);
   const pathname = "/qg";
 
   useEffect(() => {
@@ -70,6 +74,9 @@ export default function QGPage() {
           const ci = await verifierCycle(user.id);
           setCycleInfo(ci);
         }
+
+        const [pp, int, pf] = await Promise.all([getPushPullRatio(user.id), getIntensiteDistribution(user.id), getPointsFaibles(user.id)]);
+        setPushPull(pp); setIntensite(int); setPointsFaibles(pf);
 
         const saved = localStorage.getItem("gymx_goals");
         if (saved) setGoals(JSON.parse(saved));
@@ -388,6 +395,60 @@ export default function QGPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {pushPull && (
+          <div className="card p-4 space-y-2">
+            <p className="label">Equilibre push/pull</p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
+                <div className="h-full rounded-full" style={{ width: pushPull.pushPct + "%", backgroundColor: pushPull.equilibre ? "var(--color-gymx-fill-strong)" : "var(--color-gymx-accent)" }} />
+              </div>
+              <span className="text-xs font-semibold shrink-0" style={{ color: pushPull.equilibre ? "var(--color-gymx-muted)" : "var(--color-gymx-accent)" }}>
+                {pushPull.pushPct}% push / {pushPull.pullPct}% pull
+              </span>
+            </div>
+            {!pushPull.equilibre && <p className="text-xs" style={{ color: "var(--color-gymx-accent)" }}>Desequilibre detecte — ratio {pushPull.ratio}:1</p>}
+          </div>
+        )}
+
+        {intensite && intensite.facile + intensite.moyen + intensite.dur + intensite.impossible > 0 && (
+          <div className="card p-4 space-y-2">
+            <p className="label">Repartition de l&apos;effort <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(RPE)</span></p>
+            <div className="flex h-2 rounded-full overflow-hidden">
+              <div style={{ width: intensite.facile + "%", backgroundColor: "var(--color-gymx-fill)" }} />
+              <div style={{ width: intensite.moyen + "%", backgroundColor: "var(--color-gymx-fill-strong)" }} />
+              <div style={{ width: intensite.dur + "%", backgroundColor: "#8B5CF6" }} />
+              <div style={{ width: intensite.impossible + "%", backgroundColor: "var(--color-gymx-accent)" }} />
+            </div>
+            <div className="flex justify-between text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
+              <span>{intensite.facile}% Facile</span>
+              <span>{intensite.moyen}% Modere</span>
+              <span>{intensite.dur}% Dur</span>
+              <span>{intensite.impossible}% Limite</span>
+            </div>
+            {intensite.impossible > 30 && (
+              <p className="text-xs" style={{ color: "var(--color-gymx-accent)" }}>
+                Attention : plus de 30% des series sont a la limite — envisage un deload
+              </p>
+            )}
+          </div>
+        )}
+
+        {pointsFaibles.length > 0 && (
+          <div className="card p-4 space-y-2">
+            <p className="label">Points faibles <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(sous-regions negligees)</span></p>
+            <div className="space-y-1">
+              {pointsFaibles.slice(0, 5).map((pf, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span style={{ color: "var(--color-gymx-muted)" }}>{labelSousRegion(pf.sous_region)}</span>
+                  <span className="font-semibold" style={{ color: pf.sets === 0 ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+                    {pf.sets === 0 ? "Non travaille" : pf.sets + " series"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

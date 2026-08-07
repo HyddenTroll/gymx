@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculerProgressionRPE } from "@/lib/progression/engine";
+import { calculerEchauffement, getCoeffExercice } from "@/lib/dashboard/dashboard-service";
 import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamification/gamification-service";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
@@ -215,6 +216,16 @@ export default function SeancePage() {
                 {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
               </span>
             </div>
+
+            {exo.unite_actuelle !== "reps" && exo.charge_cible > 0 && !exo.series[0]?.validee && (
+              <div className="flex gap-1 flex-wrap">
+                {calculerEchauffement(exo.charge_cible, exo.unite_actuelle).map((w, wi) => (
+                  <span key={wi} className="text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+                    {w.label} ({w.charge} {exo.unite_actuelle})
+                  </span>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               {exo.series.map((serie, serieIdx) => (

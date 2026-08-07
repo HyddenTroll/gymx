@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculerProgressionRPE } from "@/lib/progression/engine";
+import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamification/gamification-service";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
@@ -31,9 +32,14 @@ function rpeToCran(rpe: number): Cran {
 
 const rpeColors = ["bg-green-500","bg-green-500","bg-lime-500","bg-lime-400","bg-yellow-400","bg-yellow-500","bg-orange-400","bg-orange-500","bg-red-500","bg-red-600"];
 
-const resteRepos = (role: string, objectif?: string): number => {
-  if (objectif === "force") return role === "principal" ? 210 : 120;
-  return role === "principal" ? 150 : 75;
+const resteRepos = (role: string, rpe?: number, objectif?: string): number => {
+  let base = role === "principal" ? 150 : 75;
+  if (objectif === "force") base += 30;
+  if (rpe !== undefined) {
+    if (rpe >= 9) base += 30;
+    else if (rpe <= 4) base = Math.max(45, base - 30);
+  }
+  return base;
 };
 
 const navItems = [
@@ -118,7 +124,10 @@ export default function SeancePage() {
     const { data: chargeData } = await supabase.from("charges").select("*").eq("user_id", user!.id).eq("exercice_id", exo.exercice.id).single();
     if (!chargeData) return;
     const { data: profil } = await supabase.from("profil").select("niveau").eq("user_id", user!.id).single();
-    const historiqueRPE = [chargeData.compteur_echecs > 0 ? 9 : 7];
+
+    const { data: historique } = await supabase.from("effort").select("valeur").eq("user_id", user!.id).eq("exercice_id", exo.exercice.id).order("created_at", { ascending: false }).limit(5);
+    const historiqueRPE = (historique || []).map((e: any) => e.valeur).reverse();
+
     const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs }).eq("id", chargeData.id);
     if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige); }
@@ -132,9 +141,33 @@ export default function SeancePage() {
     if (!seanceId) return; setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    for (const exo of exercices) { for (const serie of exo.series) { if (serie.validee) { await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre }); } } }
+    let xpGagne = 0; let nouveauRecord = false;
+
+    for (const exo of exercices) {
+      for (const serie of exo.series) {
+        if (serie.validee) {
+          await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre });
+          const estRecord = await verifierRecords(user.id, serie.exercice_id, serie.charge, serie.reps);
+          if (estRecord) { nouveauRecord = true; xpGagne += 100; }
+        }
+      }
+    }
     await supabase.from("seances").update({ terminee: true, duree: 0 }).eq("id", seanceId);
-    setSaving(false); router.push("/qg");
+    xpGagne += 50;
+
+    await initialiserGamification(user.id);
+    if (xpGagne > 0) await ajouterXP(user.id, xpGagne, "séance terminée");
+
+    const { data: g } = await supabase.from("gamification").select("*").eq("user_id", user.id).single();
+    if (g) {
+      const newStreak = g.streak + 1;
+      await supabase.from("gamification").update({ streak: newStreak }).eq("id", g.id);
+    }
+
+    setSaving(false);
+    if (nouveauRecord) setMessage(`🏆 Record battu ! +${xpGagne} XP`);
+    else setMessage(`+${xpGagne} XP gagné`);
+    setTimeout(() => router.push("/qg"), 1200);
   };
 
   if (loading) return (<div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh" }}><p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p></div>);

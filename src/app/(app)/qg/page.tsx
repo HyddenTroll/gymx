@@ -236,6 +236,28 @@ export default function QGPage() {
           </div>
         )}
 
+        {projections.length > 0 && effort && (
+          <div className="card p-4 space-y-2">
+            <p className="label">Fatigue estimée <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(récupération)</span></p>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs"
+                style={{ backgroundColor: (effort.moyenne || 0) >= 8 ? "rgba(245,158,11,0.2)" : "var(--color-gymx-fill)", color: (effort.moyenne || 0) >= 8 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
+                {(effort.moyenne || 0) >= 8 ? "!" : "✓"}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">
+                  {(effort.moyenne || 0) >= 8 ? "Fatigue élevée" : "Récupération normale"}
+                </p>
+                <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
+                  {(effort.moyenne || 0) >= 8
+                    ? "RPE moyen ≥ 8 sur les dernières séances — envisage un deload"
+                    : `RPE moyen ${effort.moyenne} — bonne gestion de l'effort`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {projections.length > 0 && (
           <div className="card p-4 space-y-3">
             <p className="label">Projections <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(taper pour fixer un objectif)</span></p>
@@ -267,12 +289,14 @@ export default function QGPage() {
                   </div>
                   {goal && (
                     <div className="flex items-center gap-2 text-[10px]">
-                      <span className="font-semibold" style={{ color: "var(--color-gymx-accent)" }}>
-                        Objectif : {goal} kg
+                      <span className="font-semibold" style={{ color: p.charge_actuelle >= goal ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+                        {p.charge_actuelle >= goal ? "✓ Objectif atteint !" : `Objectif : ${goal} kg`}
                       </span>
-                      <span style={{ color: "var(--color-gymx-muted)" }}>
-                        {goalWeeks !== null ? `(~${goalWeeks} semaines)` : "Taux insuffisant"}
-                      </span>
+                      {p.charge_actuelle < goal && (
+                        <span style={{ color: "var(--color-gymx-muted)" }}>
+                          {goalWeeks !== null ? `(~${goalWeeks} sem)` : "Taux insuffisant"}
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-[10px]">

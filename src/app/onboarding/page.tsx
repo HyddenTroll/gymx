@@ -87,9 +87,18 @@ export default function OnboardingPage() {
         const { data: exo } = await supabase.from("exercices").select("unite_par_defaut, pas_par_defaut, assist_inverse").eq("id", exId).single();
         if (exo) { await supabase.from("charges").upsert({ user_id: user.id, exercice_id: exId, charge_actuelle: charge, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 }, { onConflict: "user_id,exercice_id" }); }
       }
-      if (programmeChoisi) { const ok = await creerProgramme(user.id, programmeChoisi); if (!ok) throw new Error("Erreur création programme"); }
+      if (programmeChoisi) {
+        console.log("[onboarding] creating program...");
+        const ok = await creerProgramme(user.id, programmeChoisi);
+        if (!ok) throw new Error("Erreur lors de la création du programme");
+        console.log("[onboarding] program created");
+      }
       router.push("/qg");
-    } catch (e) { setError(e instanceof Error ? e.message : "Erreur"); } finally { setSaving(false); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur inconnue";
+      console.error("[onboarding] error:", msg);
+      setError(msg);
+    } finally { setSaving(false); }
   };
 
   const s = (sel: boolean) => `${BtnBase} ${sel ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border"}`;

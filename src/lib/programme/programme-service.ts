@@ -28,6 +28,17 @@ export async function creerProgramme(
 ): Promise<boolean> {
   const supabase = createClient();
 
+  const { data: existing } = await supabase
+    .from("programme_actif")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("programme_actif").delete().eq("id", existing.id);
+    await supabase.from("programme_structure").delete().eq("programme_actif_id", existing.id);
+  }
+
   const { data: prog, error: progError } = await supabase
     .from("programme_actif")
     .insert({
@@ -43,7 +54,10 @@ export async function creerProgramme(
     .select("id")
     .single();
 
-  if (progError || !prog) return false;
+  if (progError || !prog) {
+    console.error("[creerProgramme] error:", progError);
+    return false;
+  }
 
   for (const jourData of template.structure) {
     for (let ordre = 0; ordre < jourData.exercices.length; ordre++) {

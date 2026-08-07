@@ -14,20 +14,19 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center p-6 safe-area-top safe-area-bottom"
-      style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+      style={{ minHeight: "100dvh" }}>
       <div className="w-full max-w-sm card p-8 space-y-6">
         <div className="text-center space-y-1">
           <h1 className="font-display font-bold text-[28px] tracking-tight text-gymx-text"
             style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>
             GYMX
           </h1>
-          <p className="text-sm" style={{ color: "#6B6D72" }}>Carnet de musculation</p>
+          <p className="text-sm text-gymx-muted">Carnet de musculation</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
-            <label htmlFor="code" className="text-xs font-semibold tracking-[0.08em] uppercase"
-              style={{ color: "#6B6D72" }}>
+            <label htmlFor="code" className="label">
               Ton code
             </label>
             <input
@@ -39,14 +38,14 @@ export default function LoginPage() {
               onChange={(e) => setCode(e.target.value)}
               placeholder="Entre ton code personnel"
               className="w-full border rounded-lg px-4 py-3 text-[16px] outline-none transition-colors"
-              style={{ borderColor: "#E2E2DE", color: "#17181A", backgroundColor: "#F1F1EF" }}
-              onFocus={(e) => e.target.style.borderColor = "#E4002B"}
-              onBlur={(e) => e.target.style.borderColor = "#E2E2DE"}
+              style={{ borderColor: "var(--color-gymx-border)", color: "var(--color-gymx-text)", backgroundColor: "var(--color-gymx-bg)" }}
+              onFocus={(e) => e.target.style.borderColor = "var(--color-gymx-accent)"}
+              onBlur={(e) => e.target.style.borderColor = "var(--color-gymx-border)"}
             />
           </div>
 
           {error && (
-            <p className="text-xs text-center leading-relaxed" style={{ color: "#E4002B" }}>{error}</p>
+            <p className="text-xs text-center leading-relaxed" style={{ color: "var(--color-gymx-accent)" }}>{error}</p>
           )}
 
           <button
@@ -54,8 +53,8 @@ export default function LoginPage() {
             disabled={loading || !code}
             className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors disabled:opacity-30"
             style={{
-              backgroundColor: loading || !code ? "#D9D9D4" : "#17181A",
-              color: loading || !code ? "#6B6D72" : "#FFFFFF",
+              backgroundColor: loading || !code ? "var(--color-gymx-fill)" : "var(--color-gymx-fill-strong)",
+              color: loading || !code ? "var(--color-gymx-muted)" : "var(--color-gymx-surface)",
               fontFamily: "var(--font-body)",
             }}
           >
@@ -63,7 +62,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-xs text-center leading-relaxed" style={{ color: "#6B6D72" }}>
+        <p className="text-xs text-center leading-relaxed text-gymx-muted">
           Première fois&nbsp;? Connecte-toi pour créer ton compte.
         </p>
       </div>

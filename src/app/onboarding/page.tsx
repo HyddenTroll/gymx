@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { trouverMeilleurProgramme, creerProgramme } from "@/lib/programme/programme-service";
-import type { Niveau, Objectif, Materiel, Profil } from "@/types";
+import type { Niveau, Objectif, Materiel } from "@/types";
 import type { ProgrammeTemplate } from "@/lib/programme/templates";
 
 type Step = "niveau" | "jours" | "objectif" | "materiel" | "exclus" | "charges" | "programme";
@@ -38,6 +38,13 @@ const stepNames: Record<Step, string> = {
   exclus: "Exercices à éviter", charges: "Charges de départ", programme: "Ton programme",
 };
 
+const BtnBase = "w-full text-left px-4 py-3.5 rounded-lg border transition-colors active:scale-[0.98] touch-target";
+const BgSurface = "var(--color-gymx-surface)";
+const BgBg = "var(--color-gymx-bg)";
+const BorderC = "var(--color-gymx-border)";
+const Muted = "var(--color-gymx-muted)";
+const Accent = "var(--color-gymx-accent)";
+
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -50,14 +57,11 @@ export default function OnboardingPage() {
   const [exercices, setExercices] = useState<any[]>([]);
   const [chargesExos, setChargesExos] = useState<any[]>([]);
   const [programmeChoisi, setProgrammeChoisi] = useState<ProgrammeTemplate | null>(null);
-
-  const update = <K extends keyof OnboardingState>(key: K, value: OnboardingState[K]) =>
-    setState((p) => ({ ...p, [key]: value }));
-
+  const update = <K extends keyof OnboardingState>(k: K, v: OnboardingState[K]) => setState((p) => ({ ...p, [k]: v }));
   const steps: Step[] = ["niveau", "jours", "objectif", "materiel", "exclus", "charges", "programme"];
-  const currentIndex = steps.indexOf(step);
-  const next = () => { if (currentIndex < steps.length - 1) setStep(steps[currentIndex + 1]); };
-  const prev = () => { if (currentIndex > 0) setStep(steps[currentIndex - 1]); };
+  const ci = steps.indexOf(step);
+  const next = () => { if (ci < steps.length - 1) setStep(steps[ci + 1]); };
+  const prev = () => { if (ci > 0) setStep(steps[ci - 1]); };
 
   useEffect(() => {
     if (step === "exclus" && exercices.length === 0) {
@@ -75,51 +79,37 @@ export default function OnboardingPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login"); return; }
-      await supabase.from("profil").upsert(
-        { user_id: user.id, niveau: state.niveau!, jours_par_semaine: state.jours_par_semaine!, objectif: state.objectif!, materiel: state.materiel! },
-        { onConflict: "user_id" }
-      );
+      await supabase.from("profil").upsert({ user_id: user.id, niveau: state.niveau!, jours_par_semaine: state.jours_par_semaine!, objectif: state.objectif!, materiel: state.materiel! }, { onConflict: "user_id" });
       if (state.exclus.length > 0) {
-        await supabase.from("exercices_exclus").upsert(
-          state.exclus.map((id) => ({ user_id: user.id, exercice_id: id })), { onConflict: "user_id,exercice_id" }
-        );
+        await supabase.from("exercices_exclus").upsert(state.exclus.map((id) => ({ user_id: user.id, exercice_id: id })), { onConflict: "user_id,exercice_id" });
       }
       for (const [exId, charge] of Object.entries(state.charges).filter(([_, v]) => v > 0)) {
         const { data: exo } = await supabase.from("exercices").select("unite_par_defaut, pas_par_defaut, assist_inverse").eq("id", exId).single();
-        if (exo) {
-          await supabase.from("charges").upsert({
-            user_id: user.id, exercice_id: exId, charge_actuelle: charge,
-            unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0,
-          }, { onConflict: "user_id,exercice_id" });
-        }
+        if (exo) { await supabase.from("charges").upsert({ user_id: user.id, exercice_id: exId, charge_actuelle: charge, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 }, { onConflict: "user_id,exercice_id" }); }
       }
       if (programmeChoisi) { const ok = await creerProgramme(user.id, programmeChoisi); if (!ok) throw new Error("Erreur création programme"); }
       router.push("/qg");
     } catch (e) { setError(e instanceof Error ? e.message : "Erreur"); } finally { setSaving(false); }
   };
 
-  const optBtn = (selected: boolean) =>
-    `w-full text-left px-4 py-3.5 rounded-lg border transition-colors active:scale-[0.98] touch-target ${
-      selected ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border bg-white"
-    }`;
+  const s = (sel: boolean) => `${BtnBase} ${sel ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border"}`;
 
   return (
-    <div className="min-h-dvh flex flex-col p-4 safe-area-top safe-area-bottom" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+    <div className="min-h-dvh flex flex-col p-4 safe-area-top safe-area-bottom" style={{ minHeight: "100dvh" }}>
       <div className="flex-1 flex flex-col max-w-sm mx-auto w-full">
         <div className="w-full card p-5 space-y-5">
           <div className="flex items-center gap-1.5">
-            {steps.map((s, i) => (
-              <div key={s} className={`h-0.5 flex-1 rounded-full transition-colors ${i <= currentIndex ? "bg-gymx-accent" : "bg-gymx-border"}`} />
-            ))}
+            {steps.map((s, i) => (<div key={s} className={`h-0.5 flex-1 rounded-full transition-colors ${i <= ci ? "bg-gymx-accent" : "bg-gymx-border"}`} />))}
           </div>
           <h2 className="card-title text-center">{stepNames[step]}</h2>
 
           {step === "niveau" && (
             <div className="space-y-2">
               {niveauOptions.map((o) => (
-                <button key={o.value} onClick={() => { update("niveau", o.value); next(); }} className={optBtn(state.niveau === o.value)}>
+                <button key={o.value} onClick={() => { update("niveau", o.value); next(); }} className={s(state.niveau === o.value)}
+                  style={{ backgroundColor: BgSurface }}>
                   <div className="font-display font-bold text-[15px] text-gymx-text">{o.label}</div>
-                  <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "#6B6D72" }}>{o.desc}</div>
+                  <div className="text-xs mt-0.5 leading-relaxed" style={{ color: Muted }}>{o.desc}</div>
                 </button>
               ))}
             </div>
@@ -129,7 +119,8 @@ export default function OnboardingPage() {
             <div className="grid grid-cols-2 gap-2">
               {joursOptions.map((n) => (
                 <button key={n} onClick={() => { update("jours_par_semaine", n); next(); }}
-                  className={`py-4 rounded-lg border text-center transition-colors active:scale-[0.98] touch-target ${state.jours_par_semaine === n ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border bg-white"}`}>
+                  className={`py-4 rounded-lg border text-center transition-colors active:scale-[0.98] touch-target ${state.jours_par_semaine === n ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border"}`}
+                  style={{ backgroundColor: BgSurface }}>
                   <span className="hero-value text-2xl">{n}</span>
                   <p className="label mt-0.5">jours</p>
                 </button>
@@ -140,9 +131,10 @@ export default function OnboardingPage() {
           {step === "objectif" && (
             <div className="space-y-2">
               {objectifOptions.map((o) => (
-                <button key={o.value} onClick={() => { update("objectif", o.value); next(); }} className={optBtn(state.objectif === o.value)}>
+                <button key={o.value} onClick={() => { update("objectif", o.value); next(); }} className={s(state.objectif === o.value)}
+                  style={{ backgroundColor: BgSurface }}>
                   <div className="font-display font-bold text-[15px] text-gymx-text">{o.label}</div>
-                  <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "#6B6D72" }}>{o.desc}</div>
+                  <div className="text-xs mt-0.5 leading-relaxed" style={{ color: Muted }}>{o.desc}</div>
                 </button>
               ))}
             </div>
@@ -151,9 +143,10 @@ export default function OnboardingPage() {
           {step === "materiel" && (
             <div className="space-y-2">
               {materielOptions.map((o) => (
-                <button key={o.value} onClick={() => { update("materiel", o.value); next(); }} className={optBtn(state.materiel === o.value)}>
+                <button key={o.value} onClick={() => { update("materiel", o.value); next(); }} className={s(state.materiel === o.value)}
+                  style={{ backgroundColor: BgSurface }}>
                   <div className="font-display font-bold text-[15px] text-gymx-text">{o.label}</div>
-                  <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "#6B6D72" }}>{o.desc}</div>
+                  <div className="text-xs mt-0.5 leading-relaxed" style={{ color: Muted }}>{o.desc}</div>
                 </button>
               ))}
             </div>
@@ -161,9 +154,9 @@ export default function OnboardingPage() {
 
           {step === "exclus" && (
             <div className="space-y-2 max-h-[55dvh] overflow-y-auto overscroll-contain">
-              <p className="text-xs leading-relaxed" style={{ color: "#6B6D72" }}>Sélectionne les exercices que tu ne peux pas ou ne veux pas faire.</p>
+              <p className="text-xs leading-relaxed" style={{ color: Muted }}>Sélectionne les exercices que tu ne peux pas ou ne veux pas faire.</p>
               {exercices.length === 0 ? (
-                <p className="text-xs text-center py-6" style={{ color: "#6B6D72" }}>Chargement…</p>
+                <p className="text-xs text-center py-6" style={{ color: Muted }}>Chargement…</p>
               ) : (
                 (() => {
                   const groups = exercices.reduce((acc: any, exo: any) => { (acc[exo.groupe] = acc[exo.groupe] || []).push(exo); return acc; }, {});
@@ -172,29 +165,28 @@ export default function OnboardingPage() {
                       <p className="label text-[10px] px-1">{groupe}</p>
                       {(exos as any[]).map((exo: any) => (
                         <button key={exo.id} onClick={() => toggleExclus(exo.id)}
-                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-colors active:scale-[0.98] touch-target bg-white ${
-                            state.exclus.includes(exo.id) ? "border-gymx-accent" : "border-gymx-border"
-                          }`}>
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-colors active:scale-[0.98] touch-target ${state.exclus.includes(exo.id) ? "border-gymx-accent" : "border-gymx-border"}`}
+                          style={{ backgroundColor: BgSurface }}>
                           {exo.image_url ? (
-                            <img src={exo.image_url} alt="" className="w-9 h-9 rounded object-cover bg-gymx-bg shrink-0" loading="lazy" />
+                            <img src={exo.image_url} alt="" className="w-9 h-9 rounded object-cover shrink-0" loading="lazy" style={{ backgroundColor: BgBg }} />
                           ) : (
-                            <div className="w-9 h-9 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: "#F1F1EF" }}>
-                              <span className="text-[10px]" style={{ color: "#6B6D72" }}>?</span>
+                            <div className="w-9 h-9 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: BgBg }}>
+                              <span className="text-[10px]" style={{ color: Muted }}>?</span>
                             </div>
                           )}
                           <span className="flex-1 text-left text-sm text-gymx-text">{exo.nom_fr}</span>
-                          <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] shrink-0 ${
-                            state.exclus.includes(exo.id) ? "border-gymx-accent bg-gymx-accent text-white" : "border-gymx-border"
-                          }`}>{state.exclus.includes(exo.id) ? "✕" : ""}</span>
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] shrink-0 ${state.exclus.includes(exo.id) ? "border-gymx-accent bg-gymx-accent text-white" : ""}`}
+                            style={{ borderColor: state.exclus.includes(exo.id) ? Accent : BorderC }}>
+                            {state.exclus.includes(exo.id) ? "✕" : ""}
+                          </span>
                         </button>
                       ))}
                     </div>
                   ));
                 })()
               )}
-              <button onClick={next}
-                className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors touch-target mt-1"
-                style={{ backgroundColor: "#17181A", color: "#FFFFFF" }}>
+              <button onClick={next} className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors touch-target mt-1"
+                style={{ backgroundColor: "var(--color-gymx-fill-strong)", color: "var(--color-gymx-surface)" }}>
                 {state.exclus.length > 0 ? `${state.exclus.length} exclus · Continuer` : "Aucun exclu · Continuer"}
               </button>
             </div>
@@ -202,26 +194,24 @@ export default function OnboardingPage() {
 
           {step === "charges" && (
             <div className="space-y-2 max-h-[55dvh] overflow-y-auto overscroll-contain">
-              <p className="text-xs leading-relaxed" style={{ color: "#6B6D72" }}>Charge de départ pour les mouvements principaux (laisse vide si inconnu).</p>
+              <p className="text-xs leading-relaxed" style={{ color: Muted }}>Charge de départ pour les mouvements principaux (laisse vide si inconnu).</p>
               {chargesExos.length === 0 ? (
-                <p className="text-xs text-center py-6" style={{ color: "#6B6D72" }}>Chargement…</p>
+                <p className="text-xs text-center py-6" style={{ color: Muted }}>Chargement…</p>
               ) : (
                 chargesExos.map((exo: any) => (
-                  <div key={exo.id} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border bg-white" style={{ borderColor: "#E2E2DE" }}>
+                  <div key={exo.id} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border" style={{ borderColor: BorderC, backgroundColor: BgSurface }}>
                     <span className="text-sm text-gymx-text flex-1 leading-tight">{exo.nom_fr}</span>
                     <input type="number" inputMode="decimal" placeholder="0"
                       value={state.charges[exo.id] ?? ""}
                       onChange={(e) => { const v = e.target.value ? Number(e.target.value) : 0; setState((p) => ({ ...p, charges: { ...p.charges, [exo.id]: v } })); }}
                       className="w-16 border rounded px-2 py-2 text-center text-sm"
-                      style={{ fontSize: "16px", borderColor: "#E2E2DE", backgroundColor: "#F1F1EF", color: "#17181A", fontFamily: "var(--font-mono)" }}
-                    />
-                    <span className="text-[10px] w-5 text-center" style={{ color: "#6B6D72" }}>{exo.unite_par_defaut}</span>
+                      style={{ fontSize: "16px", borderColor: BorderC, backgroundColor: BgBg, color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
+                    <span className="text-[10px] w-5 text-center" style={{ color: Muted }}>{exo.unite_par_defaut}</span>
                   </div>
                 ))
               )}
-              <button onClick={next}
-                className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors touch-target mt-1"
-                style={{ backgroundColor: "#17181A", color: "#FFFFFF" }}>
+              <button onClick={next} className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors touch-target mt-1"
+                style={{ backgroundColor: "var(--color-gymx-fill-strong)", color: "var(--color-gymx-surface)" }}>
                 Continuer
               </button>
             </div>
@@ -240,29 +230,28 @@ export default function OnboardingPage() {
                 <div className="space-y-3">
                   <div className="card p-4 space-y-2 border-gymx-accent">
                     <h3 className="card-title">{programmeChoisi.nom}</h3>
-                    <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>{programmeChoisi.description}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: Muted }}>{programmeChoisi.description}</p>
                     <div className="flex gap-2 pt-1">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: "#F1F1EF", color: "#6B6D72" }}>{programmeChoisi.jours_par_semaine}j/sem</span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: "#F1F1EF", color: "#6B6D72" }}>{programmeChoisi.duree_semaines} sem</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: BgBg, color: Muted }}>{programmeChoisi.jours_par_semaine}j/sem</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: BgBg, color: Muted }}>{programmeChoisi.duree_semaines} sem</span>
                     </div>
                   </div>
-                  {error && <p className="text-xs text-center leading-relaxed" style={{ color: "#E4002B" }}>{error}</p>}
+                  {error && <p className="text-xs text-center leading-relaxed" style={{ color: Accent }}>{error}</p>}
                   <button onClick={saveAndRedirect} disabled={saving}
                     className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors disabled:opacity-30 touch-target"
-                    style={{ backgroundColor: saving ? "#D9D9D4" : "#17181A", color: saving ? "#6B6D72" : "#FFFFFF" }}>
+                    style={{ backgroundColor: saving ? "var(--color-gymx-fill)" : "var(--color-gymx-fill-strong)", color: saving ? Muted : "var(--color-gymx-surface)" }}>
                     {saving ? "Création…" : "Commencer l'aventure"}
                   </button>
                 </div>
               ) : (
-                <p className="text-xs text-center py-6" style={{ color: "#6B6D72" }}>Aucun programme trouvé pour ton profil.</p>
+                <p className="text-xs text-center py-6" style={{ color: Muted }}>Aucun programme trouvé pour ton profil.</p>
               )}
             </div>
           )}
 
           {step !== "niveau" && step !== "programme" && (
-            <button onClick={prev}
-              className="w-full text-sm font-semibold py-3 border rounded-lg transition-colors touch-target"
-              style={{ borderColor: "#E2E2DE", color: "#6B6D72" }}>
+            <button onClick={prev} className="w-full text-sm font-semibold py-3 border rounded-lg transition-colors touch-target"
+              style={{ borderColor: BorderC, color: Muted, backgroundColor: BgSurface }}>
               Retour
             </button>
           )}

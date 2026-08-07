@@ -44,8 +44,8 @@ export default function QGPage() {
   }, [supabase]);
 
   if (loading) return (
-    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
-      <p className="text-sm font-semibold" style={{ color: "#6B6D72" }}>Chargement…</p>
+    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
+      <p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p>
     </div>
   );
 
@@ -54,21 +54,21 @@ export default function QGPage() {
   const rang = gamification ? niveaux[Math.min(gamification.niveau - 1, niveaux.length - 1)] : "Recrue";
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
         <header className="flex items-start justify-between">
           <div>
-            <h1 className="card-title" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "17px", color: "#17181A" }}>QG</h1>
-            <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B6D72" }}>
+            <h1 className="card-title" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "17px", color: "var(--color-gymx-text)" }}>QG</h1>
+            <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-gymx-muted)" }}>
               Tableau de bord
             </p>
           </div>
           {profil && (
             <div className="text-right">
-              <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B6D72" }}>
+              <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-gymx-muted)" }}>
                 {profil.niveau}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: "#6B6D72" }}>
+              <p className="text-xs mt-0.5" style={{ color: "var(--color-gymx-muted)" }}>
                 {profil.objectif === "force" ? "Force" : profil.objectif === "muscle" ? "Hypertrophie" : "Recomposition"} · {profil.jours_par_semaine}j/sem
               </p>
             </div>
@@ -79,20 +79,20 @@ export default function QGPage() {
           <div className="card p-4 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 shrink-0" style={{ color: "#17181A" }} />
-                <span className="font-semibold text-sm" style={{ fontFamily: "var(--font-body)", color: "#17181A" }}>
+                <Zap className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-text)" }} />
+                <span className="font-semibold text-sm" style={{ fontFamily: "var(--font-body)", color: "var(--color-gymx-text)" }}>
                   {rang} · Niveau {gamification.niveau}
                 </span>
               </div>
-              <span className="text-xs font-semibold" style={{ color: "#6B6D72" }}>
+              <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-muted)" }}>
                 {gamification.xp % 100}/100 XP
               </span>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#D9D9D4" }}>
-              <div className="h-full rounded-full transition-all" style={{ width: `${xpProgress}%`, backgroundColor: "#2A2B2E" }} />
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
+              <div className="h-full rounded-full transition-all" style={{ width: `${xpProgress}%`, backgroundColor: "var(--color-gymx-fill-strong)" }} />
             </div>
             {gamification.streak > 0 && (
-              <p className="text-xs" style={{ color: "#6B6D72" }}>{gamification.streak} séances d&apos;affilée</p>
+              <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{gamification.streak} séances d&apos;affilée</p>
             )}
           </div>
         )}
@@ -100,20 +100,20 @@ export default function QGPage() {
         <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="label">Force max estimée <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(1RM)</span></p>
-            {forceMax.length > 0 && <Trophy className="w-4 h-4 shrink-0" style={{ color: "#E4002B" }} />}
+            {forceMax.length > 0 && <Trophy className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-accent)" }} />}
           </div>
           {forceMax.length === 0 ? (
-            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--color-gymx-muted)" }}>
               Termine ta première séance pour voir ta force max estimée (1RM).
             </p>
           ) : (
             <div className="space-y-2">
               {forceMax.slice(0, 5).map((f: any, i: number) => (
                 <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#6B6D72" }}>{f.nom}</span>
+                  <span className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>{f.nom}</span>
                   <span className="hero-value text-xl">
                     {f.rm}
-                    <span className="text-xs font-mono font-medium ml-1" style={{ color: "#6B6D72", fontFamily: "var(--font-mono)" }}>kg</span>
+                    <span className="text-xs font-mono font-medium ml-1" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>kg</span>
                   </span>
                 </div>
               ))}
@@ -125,19 +125,19 @@ export default function QGPage() {
           <div className="card p-4 space-y-1">
             <p className="label">Régularité</p>
             <span className="hero-value" style={{ fontSize: "2rem" }}>{regularite.taux}%</span>
-            {regularite.streak > 0 && <p className="text-xs" style={{ color: "#6B6D72" }}>{regularite.streak}j de suite</p>}
+            {regularite.streak > 0 && <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{regularite.streak}j de suite</p>}
           </div>
           <div className="card p-4 space-y-1">
             <p className="label">Séances</p>
             <span className="hero-value" style={{ fontSize: "2rem" }}>{regularite.streak}</span>
-            <p className="text-xs" style={{ color: "#6B6D72" }}>faites</p>
+            <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>faites</p>
           </div>
         </div>
 
         <div className="card p-4 space-y-3">
           <p className="label">Travail total <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(volume)</span></p>
           {volume.length === 0 ? (
-            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--color-gymx-muted)" }}>
               Aucune série cette semaine. Lance ta séance du jour pour commencer à remplir la zone.
             </p>
           ) : (
@@ -147,16 +147,16 @@ export default function QGPage() {
                 return (
                   <div key={i} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "#6B6D72" }}>{v.groupe}</span>
+                      <span style={{ color: "var(--color-gymx-muted)" }}>{v.groupe}</span>
                       <div className="flex items-center gap-2">
-                        <span style={{ color: "#17181A" }}>{v.sets} séries</span>
-                        {isIdeal && <span className="text-xs font-semibold" style={{ color: "#E4002B" }}>Idéal</span>}
+                        <span style={{ color: "var(--color-gymx-text)" }}>{v.sets} séries</span>
+                        {isIdeal && <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-accent)" }}>Idéal</span>}
                       </div>
                     </div>
-                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "#D9D9D4" }}>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
                       <div className="h-full rounded-full" style={{
                         width: `${Math.min((v.sets / 20) * 100, 100)}%`,
-                        backgroundColor: isIdeal ? "#E4002B" : "#2A2B2E"
+                        backgroundColor: isIdeal ? "var(--color-gymx-accent)" : "var(--color-gymx-fill-strong)"
                       }} />
                     </div>
                   </div>
@@ -164,7 +164,7 @@ export default function QGPage() {
               })}
             </div>
           )}
-          <p className="text-xs" style={{ color: "#6B6D72" }}>Zone idéale&nbsp;: 10-20 séries/muscle par semaine</p>
+          <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>Zone idéale&nbsp;: 10-20 séries/muscle par semaine</p>
         </div>
 
         {freq.length > 0 && (
@@ -173,10 +173,10 @@ export default function QGPage() {
             <div className="space-y-1.5">
               {freq.map((f: any, i: number) => (
                 <div key={i} className="flex items-center justify-between text-sm">
-                  <span style={{ color: "#6B6D72" }}>{f.groupe}</span>
+                  <span style={{ color: "var(--color-gymx-muted)" }}>{f.groupe}</span>
                   <div className="flex items-center gap-2">
-                    <span style={{ color: "#17181A" }}>{f.fois}×</span>
-                    {f.ok ? <span className="text-xs font-semibold" style={{ color: "#E4002B" }}>✓ ≥2</span> : <span className="text-xs" style={{ color: "#6B6D72" }}>✗</span>}
+                    <span style={{ color: "var(--color-gymx-text)" }}>{f.fois}×</span>
+                    {f.ok ? <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-accent)" }}>✓ ≥2</span> : <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>✗</span>}
                   </div>
                 </div>
               ))}
@@ -189,11 +189,11 @@ export default function QGPage() {
             <p className="label">Effort moyen <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(RPE)</span></p>
             <div className="flex items-center gap-2">
               <span className="hero-value" style={{ fontSize: "2rem" }}>{effort.moyenne}</span>
-              <span className="text-sm" style={{ color: "#6B6D72" }}>/10</span>
+              <span className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>/10</span>
               {effort.trop_dur && (
                 <div className="flex items-center gap-1 ml-auto">
-                  <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: "#E4002B" }} />
-                  <span className="text-xs" style={{ color: "#E4002B" }}>Trop de séances à la limite</span>
+                  <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-accent)" }} />
+                  <span className="text-xs" style={{ color: "var(--color-gymx-accent)" }}>Trop de séances à la limite</span>
                 </div>
               )}
             </div>
@@ -205,10 +205,10 @@ export default function QGPage() {
             <p className="label">Poids du corps</p>
             <div className="flex items-end gap-2">
               <span className="hero-value" style={{ fontSize: "2rem" }}>{poidsCorps[0].poids}</span>
-              <span className="text-sm mb-1" style={{ color: "#6B6D72" }}>kg</span>
+              <span className="text-sm mb-1" style={{ color: "var(--color-gymx-muted)" }}>kg</span>
               {poidsCorps.length > 1 && (
                 <span className="text-xs mb-1 font-semibold" style={{
-                  color: poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "#E4002B" : "#6B6D72"
+                  color: poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)"
                 }}>
                   {poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "+" : ""}
                   {(poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids).toFixed(1)} kg
@@ -220,23 +220,23 @@ export default function QGPage() {
 
         {forceMax.length === 0 && volume.length === 0 && !effort && (
           <div className="card p-8 text-center space-y-2">
-            <BarChart3 className="w-8 h-8 mx-auto" style={{ color: "#D9D9D4" }} />
-            <p className="text-sm font-semibold" style={{ color: "#17181A" }}>Bienvenue sur GYMX</p>
-            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+            <BarChart3 className="w-8 h-8 mx-auto" style={{ color: "var(--color-gymx-fill)" }} />
+            <p className="text-sm font-semibold" style={{ color: "var(--color-gymx-text)" }}>Bienvenue sur GYMX</p>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--color-gymx-muted)" }}>
               Termine ta première séance pour voir tes données apparaître ici.
             </p>
           </div>
         )}
       </div>
 
-      <nav className="sticky bottom-0 bg-white border-t px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "#E2E2DE", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
+      <nav className="sticky bottom-0  border-t px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
               className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-              style={{ color: active ? "#E4002B" : "#6B6D72" }}>
-              <item.icon className="w-5 h-5" style={{ color: active ? "#E4002B" : "#6B6D72" }} />
+              style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+              <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
               <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
             </Link>
           );

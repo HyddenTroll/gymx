@@ -39,7 +39,7 @@ export default function BibliothequePage() {
   }, [supabase, filtreGroupe, filtreEquip, search]);
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
         <header className="pt-1">
           <h1 className="card-title">Bibliothèque</h1>
@@ -47,21 +47,21 @@ export default function BibliothequePage() {
         </header>
 
         <div className="flex items-center gap-2 card px-3 py-2.5">
-          <Search className="w-4 h-4 shrink-0" style={{ color: "#6B6D72" }} />
+          <Search className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-muted)" }} />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher un exercice…"
             className="flex-1 bg-transparent text-sm outline-none"
-            style={{ fontSize: "16px", color: "#17181A", fontFamily: "var(--font-body)" }} />
+            style={{ fontSize: "16px", color: "var(--color-gymx-text)", fontFamily: "var(--font-body)" }} />
         </div>
 
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 overscroll-contain">
           <button onClick={() => setFiltreGroupe(null)}
             className={`shrink-0 px-3 py-2 rounded-full text-[10px] font-semibold border transition-colors touch-target ${
-              !filtreGroupe ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted bg-white"
+              !filtreGroupe ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted "
             }`}>Tous</button>
           {groupes.map((g) => (
             <button key={g} onClick={() => setFiltreGroupe(g === filtreGroupe ? null : g)}
-              className={`shrink-0 px-3 py-2 rounded-full text-[10px] font-semibold border transition-colors touch-target bg-white ${
+              className={`shrink-0 px-3 py-2 rounded-full text-[10px] font-semibold border transition-colors touch-target  ${
                 filtreGroupe === g ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted"
               }`}>{g}</button>
           ))}
@@ -70,7 +70,7 @@ export default function BibliothequePage() {
         <div className="flex gap-1.5">
           {equipements.map((eq) => (
             <button key={eq} onClick={() => setFiltreEquip(eq === filtreEquip ? null : eq)}
-              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-semibold border transition-colors touch-target bg-white ${
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-semibold border transition-colors touch-target  ${
                 filtreEquip === eq ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted"
               }`}>
               {eq === "salle" ? "Salle" : eq === "halteres" ? "Haltères" : "Poids du corps"}
@@ -80,32 +80,32 @@ export default function BibliothequePage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <p className="text-sm font-semibold" style={{ color: "#6B6D72" }}>Chargement…</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p>
           </div>
         ) : exercices.length === 0 ? (
           <div className="card p-6 text-center">
-            <p className="text-sm" style={{ color: "#6B6D72" }}>Aucun exercice trouvé.</p>
+            <p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>Aucun exercice trouvé.</p>
           </div>
         ) : (
           <div className="space-y-2">
             {exercices.map((exo: any) => (
               <div key={exo.id} className="card flex items-start gap-3 p-3">
                 {exo.image_url ? (
-                  <img src={exo.image_url} alt={exo.nom_fr} className="w-14 h-14 rounded-lg object-cover shrink-0" style={{ backgroundColor: "#F1F1EF" }} loading="lazy" />
+                  <img src={exo.image_url} alt={exo.nom_fr} className="w-14 h-14 rounded-lg object-cover shrink-0" style={{ backgroundColor: "var(--color-gymx-bg)" }} loading="lazy" />
                 ) : (
-                  <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: "#F1F1EF" }}>
-                    <span className="text-xs font-semibold" style={{ color: "#6B6D72" }}>?</span>
+                  <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--color-gymx-bg)" }}>
+                    <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-muted)" }}>?</span>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-[15px] text-gymx-text truncate" style={{ fontFamily: "var(--font-body)" }}>{exo.nom_fr}</h3>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "#F1F1EF", color: "#6B6D72" }}>{exo.groupe}</span>
-                    <span className="text-xs" style={{ color: "#6B6D72" }}>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-muted)" }}>{exo.groupe}</span>
+                    <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
                       {exo.equipement === "salle" ? "Salle" : exo.equipement === "halteres" ? "Haltères" : "Corps"}
                     </span>
                   </div>
-                  <p className="text-xs mt-0.5" style={{ color: "#6B6D72" }}>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--color-gymx-muted)" }}>
                     {exo.compound ? "Composé" : "Isolation"} · {exo.role === "principal" ? "Principal" : "Accessoire"}
                   </p>
                 </div>
@@ -115,15 +115,15 @@ export default function BibliothequePage() {
         )}
       </div>
 
-      <nav className="sticky bottom-0 bg-white border-t px-2 py-1 flex justify-around items-center z-50"
-        style={{ borderColor: "#E2E2DE", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
+      <nav className="sticky bottom-0  border-t px-2 py-1 flex justify-around items-center z-50"
+        style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
               className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-              style={{ color: active ? "#E4002B" : "#6B6D72" }}>
-              <item.icon className="w-5 h-5" style={{ color: active ? "#E4002B" : "#6B6D72" }} />
+              style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+              <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
               <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
             </Link>
           );

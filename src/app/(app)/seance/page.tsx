@@ -175,18 +175,18 @@ export default function SeancePage() {
   };
 
   if (loading) return (
-    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
-      <p className="text-sm font-semibold" style={{ color: "#6B6D72" }}>Chargement…</p>
+    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
+      <p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p>
     </div>
   );
 
   if (noProfil || noProgramme) return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-6" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+    <div className="min-h-dvh flex flex-col items-center justify-center p-6" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
       <div className="card w-full max-w-sm p-6 text-center space-y-3">
         <p className="card-title">{noProfil ? "Configure ton profil" : "Choisis un programme"}</p>
         <button onClick={() => router.push("/onboarding")}
           className="w-full font-semibold text-sm py-3.5 rounded-lg touch-target"
-          style={{ backgroundColor: "#17181A", color: "#FFFFFF" }}>
+          style={{ backgroundColor: "var(--color-gymx-text)", color: "var(--color-gymx-surface)" }}>
           Commencer
         </button>
       </div>
@@ -196,25 +196,25 @@ export default function SeancePage() {
   const toutValide = exercices.every((e) => e.series.every((s) => s.validee) && e.slider_submitted);
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="card-title">Séance du jour</h1>
-            <p className="label text-[10px]" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B6D72" }}>
+            <p className="label text-[10px]" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-gymx-muted)" }}>
               {exercices.filter((e) => e.series.every((s) => s.validee)).length}/{exercices.length} exercices
             </p>
           </div>
           <button onClick={sauverSeance} disabled={!toutValide || saving}
             className="font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors disabled:opacity-30 touch-target"
-            style={{ backgroundColor: toutValide && !saving ? "#17181A" : "#D9D9D4", color: toutValide && !saving ? "#FFFFFF" : "#6B6D72" }}>
+            style={{ backgroundColor: toutValide && !saving ? "var(--color-gymx-text)" : "var(--color-gymx-fill)", color: toutValide && !saving ? "var(--color-gymx-surface)" : "var(--color-gymx-muted)" }}>
             {saving ? "Sauvegarde…" : "Terminer"}
           </button>
         </header>
 
         {exercices.length === 0 && (
           <div className="card p-6 text-center">
-            <p className="text-sm" style={{ color: "#6B6D72" }}>Aucun exercice pour aujourd&apos;hui.</p>
+            <p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>Aucun exercice pour aujourd&apos;hui.</p>
           </div>
         )}
 
@@ -225,7 +225,7 @@ export default function SeancePage() {
                 <h3 className="font-semibold text-[15px] text-gymx-text" style={{ fontFamily: "var(--font-body)" }}>{exo.exercice.nom_fr || "Exercice"}</h3>
                 <p className="label text-[10px]">{exo.role === "principal" ? "Principal" : "Accessoire"}</p>
               </div>
-              <span className="text-sm font-mono font-medium shrink-0" style={{ color: "#6B6D72", fontFamily: "var(--font-mono)" }}>
+              <span className="text-sm font-mono font-medium shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
                 {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.exercice.unite_par_defaut || "kg"}` : "—"}
               </span>
             </div>
@@ -233,27 +233,27 @@ export default function SeancePage() {
             <div className="space-y-1.5">
               {exo.series.map((serie, serieIdx) => (
                 <div key={serieIdx} className={`flex items-center gap-1.5 p-2 rounded-lg ${serie.validee ? "bg-gymx-accent/5" : ""}`}
-                  style={{ backgroundColor: serie.validee ? "rgba(228,0,43,0.04)" : "#F1F1EF" }}>
-                  <span className="text-xs font-mono w-5 shrink-0" style={{ color: "#6B6D72", fontFamily: "var(--font-mono)" }}>S{serieIdx + 1}</span>
+                  style={{ backgroundColor: serie.validee ? "rgba(228,0,43,0.04)" : "var(--color-gymx-bg)" }}>
+                  <span className="text-xs font-mono w-5 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{serieIdx + 1}</span>
                   <div className="flex-1 flex items-center gap-1.5">
                     <input type="number" value={serie.reps} onChange={(e) => updateSerie(exoIdx, serieIdx, { reps: Number(e.target.value) || 0 })}
                       disabled={serie.validee} inputMode="numeric"
                       className="w-14 border rounded px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
-                      style={{ fontSize: "16px", borderColor: "#E2E2DE", backgroundColor: "#FFFFFF", color: "#17181A", fontFamily: "var(--font-mono)" }} />
-                    <span className="text-xs" style={{ color: "#6B6D72" }}>réps</span>
+                      style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
+                    <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>réps</span>
                     {exo.exercice.unite_par_defaut !== "reps" && (
                       <>
                         <input type="number" value={serie.charge} onChange={(e) => updateSerie(exoIdx, serieIdx, { charge: Number(e.target.value) || 0 })}
                           disabled={serie.validee} inputMode="decimal"
                           className="w-16 border rounded px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
-                          style={{ fontSize: "16px", borderColor: "#E2E2DE", backgroundColor: "#FFFFFF", color: "#17181A", fontFamily: "var(--font-mono)" }} />
-                        <span className="text-xs" style={{ color: "#6B6D72" }}>{exo.exercice.unite_par_defaut || "kg"}</span>
+                          style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
+                        <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{exo.exercice.unite_par_defaut || "kg"}</span>
                       </>
                     )}
                   </div>
                   <button onClick={() => validerSerie(exoIdx, serieIdx)} disabled={serie.validee}
                     className="p-2 rounded-full transition-colors touch-target"
-                    style={{ backgroundColor: serie.validee ? "#E4002B" : "#E2E2DE", color: serie.validee ? "#FFFFFF" : "#6B6D72" }}>
+                    style={{ backgroundColor: serie.validee ? "var(--color-gymx-accent)" : "var(--color-gymx-border)", color: serie.validee ? "var(--color-gymx-surface)" : "var(--color-gymx-muted)" }}>
                     <Check className="w-4 h-4" />
                   </button>
                 </div>
@@ -261,17 +261,17 @@ export default function SeancePage() {
             </div>
 
             {exo.series.every((s) => s.validee) && !exo.slider_submitted && (
-              <div className="space-y-2 pt-2 border-t" style={{ borderColor: "#E2E2DE" }}>
-                <p className="text-sm font-semibold" style={{ color: "#17181A" }}>
-                  C&apos;était comment&nbsp;? <span className="font-normal" style={{ color: "#6B6D72" }}>(RPE)</span>
+              <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--color-gymx-border)" }}>
+                <p className="text-sm font-semibold" style={{ color: "var(--color-gymx-text)" }}>
+                  C&apos;était comment&nbsp;? <span className="font-normal" style={{ color: "var(--color-gymx-muted)" }}>(RPE)</span>
                 </p>
                 <div className="grid grid-cols-5 gap-1.5">
                   {cranLabels.map((c) => (
                     <button key={c.value} onClick={() => submitSlider(exoIdx, c.value)}
-                      className="flex flex-col items-center gap-0.5 py-3 rounded-lg border transition-colors active:scale-95 touch-target bg-white"
-                      style={{ borderColor: "#E2E2DE" }}>
-                      <span className="text-[11px] font-semibold leading-tight text-center" style={{ fontFamily: "var(--font-body)", color: "#17181A" }}>{c.label}</span>
-                      <span className="text-[9px]" style={{ color: "#6B6D72" }}>{c.rpe}</span>
+                      className="flex flex-col items-center gap-0.5 py-3 rounded-lg border transition-colors active:scale-95 touch-target "
+                      style={{ borderColor: "var(--color-gymx-border)" }}>
+                      <span className="text-[11px] font-semibold leading-tight text-center" style={{ fontFamily: "var(--font-body)", color: "var(--color-gymx-text)" }}>{c.label}</span>
+                      <span className="text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>{c.rpe}</span>
                     </button>
                   ))}
                 </div>
@@ -279,7 +279,7 @@ export default function SeancePage() {
             )}
 
             {exo.slider_submitted && (
-              <p className="text-xs text-center" style={{ color: "#E4002B" }}>✓ Effort enregistré</p>
+              <p className="text-xs text-center" style={{ color: "var(--color-gymx-accent)" }}>✓ Effort enregistré</p>
             )}
           </div>
         ))}
@@ -287,24 +287,24 @@ export default function SeancePage() {
         {chrono !== null && chrono > 0 && (
           <div className="fixed bottom-20 right-3 card px-3 py-2 flex items-center gap-2 z-50"
             style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.06)" }}>
-            <Timer className="w-4 h-4 shrink-0" style={{ color: "#17181A" }} />
-            <span className="font-mono font-medium" style={{ color: "#17181A", fontFamily: "var(--font-mono)" }}>{formaterTemps(chrono)}</span>
-            <button onClick={() => setChronoRunning(!chronoRunning)} className="p-1 touch-target" style={{ color: "#6B6D72" }}>
+            <Timer className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-text)" }} />
+            <span className="font-mono font-medium" style={{ color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }}>{formaterTemps(chrono)}</span>
+            <button onClick={() => setChronoRunning(!chronoRunning)} className="p-1 touch-target" style={{ color: "var(--color-gymx-muted)" }}>
               {chronoRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
           </div>
         )}
       </div>
 
-      <nav className="sticky bottom-0 bg-white border-t px-2 py-1 flex justify-around items-center z-50"
-        style={{ borderColor: "#E2E2DE", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
+      <nav className="sticky bottom-0  border-t px-2 py-1 flex justify-around items-center z-50"
+        style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
               className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-              style={{ color: active ? "#E4002B" : "#6B6D72" }}>
-              <item.icon className="w-5 h-5" style={{ color: active ? "#E4002B" : "#6B6D72" }} />
+              style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+              <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
               <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
             </Link>
           );

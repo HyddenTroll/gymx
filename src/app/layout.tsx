@@ -38,9 +38,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="fr" className={`${orbitron.variable} ${rajdhani.variable}`}>
       <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="GYMX" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/icon-192.svg" />
       </head>
-      <body className="safe-area-top"><AuthGuard>{children}</AuthGuard></body>
+      <body className="safe-area-top safe-area-bottom">
+        <AuthGuard>{children}</AuthGuard>
+      </body>
     </html>
   );
 }

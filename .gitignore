@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+# context fichier de reference local (secrets, infos projet)
+.context.md
+docs/

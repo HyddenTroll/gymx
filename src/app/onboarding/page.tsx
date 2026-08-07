@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Niveau, Objectif, Materiel, Profil } from "@/types";
 
@@ -67,6 +67,8 @@ export default function OnboardingPage() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exercices, setExercices] = useState<any[]>([]);
+  const [chargesExos, setChargesExos] = useState<any[]>([]);
 
   const update = <K extends keyof OnboardingState>(
     key: K,
@@ -82,6 +84,28 @@ export default function OnboardingPage() {
 
   const prev = () => {
     if (currentIndex > 0) setStep(steps[currentIndex - 1]);
+  };
+
+  useEffect(() => {
+    if (step === "exclus" && exercices.length === 0) {
+      supabase.from("exercices").select("id, nom_fr, groupe").order("groupe").order("nom_fr").then(({ data }) => {
+        if (data) setExercices(data);
+      });
+    }
+    if (step === "charges" && chargesExos.length === 0) {
+      supabase.from("exercices").select("id, nom_fr, groupe, role, unite_par_defaut").eq("role", "principal").order("groupe").then(({ data }) => {
+        if (data) setChargesExos(data);
+      });
+    }
+  }, [step, exercices.length, chargesExos.length, supabase]);
+
+  const toggleExclus = (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      exclus: prev.exclus.includes(id)
+        ? prev.exclus.filter((e) => e !== id)
+        : [...prev.exclus, id],
+    }));
   };
 
   const canProceed = (): boolean => {
@@ -124,6 +148,24 @@ export default function OnboardingPage() {
           .insert(state.exclus.map((id) => ({ user_id: user.id, exercice_id: id })));
 
         if (exclError) throw exclError;
+      }
+
+      const chargeEntries = Object.entries(state.charges).filter(([_, v]) => v > 0);
+      if (chargeEntries.length > 0) {
+        for (const [exerciceId, charge] of chargeEntries) {
+          const { data: exo } = await supabase.from("exercices").select("unite_par_defaut, pas_par_defaut, assist_inverse").eq("id", exerciceId).single();
+          if (exo) {
+            await supabase.from("charges").upsert({
+              user_id: user.id,
+              exercice_id: exerciceId,
+              charge_actuelle: charge,
+              unite: exo.unite_par_defaut,
+              pas: exo.pas_par_defaut,
+              sens: exo.assist_inverse ? "inverse" : "normal",
+              compteur_echecs: 0,
+            });
+          }
+        }
       }
 
       router.push("/seance");
@@ -235,32 +277,86 @@ export default function OnboardingPage() {
 
           {/* EXCLUS */}
           {step === "exclus" && (
-            <div className="space-y-4">
-              <p className="text-gymx-muted text-sm">
-                Tu pourras modifier ça à tout moment.
+            <div className="space-y-3 max-h-[60dvh] overflow-y-auto">
+              <p className="text-gymx-muted text-xs">
+                 Sélectionne les exercices que tu ne peux pas ou ne veux pas faire.
               </p>
-              <div className="flex gap-3">
-                <button onClick={next} className="flex-1 bg-gymx-cyan/10 border border-gymx-cyan text-gymx-cyan font-display text-sm py-3 rounded-lg">
-                  PASSER
-                </button>
-              </div>
+              {exercices.length === 0 ? (
+                <p className="text-gymx-muted text-xs text-center py-4">Chargement…</p>
+              ) : (
+                (() => {
+                  const groups = exercices.reduce((acc: any, exo: any) => {
+                    (acc[exo.groupe] = acc[exo.groupe] || []).push(exo);
+                    return acc;
+                  }, {} as Record<string, any[]>);
+                  return Object.entries(groups).map(([groupe, exos]) => (
+                    <div key={groupe} className="space-y-1">
+                      <p className="text-[10px] text-gymx-muted font-display uppercase tracking-wider">{groupe}</p>
+                      {(exos as any[]).map((exo: any) => (
+                        <button
+                          key={exo.id}
+                          onClick={() => toggleExclus(exo.id)}
+                          className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg border text-sm transition-all ${
+                            state.exclus.includes(exo.id)
+                              ? "border-gymx-magenta bg-gymx-magenta/10 text-gymx-magenta"
+                              : "border-gymx-border bg-gymx-panel text-gymx-text"
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                            state.exclus.includes(exo.id)
+                              ? "border-gymx-magenta bg-gymx-magenta text-white"
+                              : "border-gymx-muted"
+                          }`}>
+                            {state.exclus.includes(exo.id) ? "✕" : ""}
+                          </span>
+                          <span className="text-xs">{exo.nom_fr}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ));
+                })()
+              )}
+              <button onClick={next} className="w-full bg-gymx-cyan/10 border border-gymx-cyan text-gymx-cyan font-display text-sm py-3 rounded-lg mt-2">
+                {state.exclus.length > 0 ? `✓ ${state.exclus.length} exclus · CONTINUER` : "AUCUN EXCLU · CONTINUER"}
+              </button>
             </div>
           )}
 
           {/* CHARGES */}
           {step === "charges" && (
-            <div className="space-y-4">
-              <p className="text-gymx-muted text-sm">
-                Tu pourras ajuster à la première séance. Laisse vide si tu ne sais pas.
+            <div className="space-y-3 max-h-[60dvh] overflow-y-auto">
+              <p className="text-gymx-muted text-xs">
+                Charge de départ pour les mouvements principaux (laisse vide si inconnu).
               </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { update("charges", {}); next(); }}
-                  className="flex-1 bg-gymx-cyan/10 border border-gymx-cyan text-gymx-cyan font-display text-sm py-3 rounded-lg"
-                >
-                  PASSER
-                </button>
-              </div>
+              {chargesExos.length === 0 ? (
+                <p className="text-gymx-muted text-xs text-center py-4">Chargement…</p>
+              ) : (
+                chargesExos.map((exo: any) => (
+                  <div key={exo.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-gymx-border bg-gymx-panel">
+                    <span className="text-xs text-gymx-text flex-1">{exo.nom_fr}</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={state.charges[exo.id] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value ? Number(e.target.value) : 0;
+                          setState((prev) => ({
+                            ...prev,
+                            charges: { ...prev.charges, [exo.id]: val },
+                          }));
+                        }}
+                        className="w-16 bg-gymx-bg border border-gymx-border rounded px-2 py-1.5 text-center text-sm text-gymx-text"
+                      />
+                      <span className="text-[10px] text-gymx-muted w-6">{exo.unite_par_defaut}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+              <button onClick={next} className="w-full bg-gymx-cyan/10 border border-gymx-cyan text-gymx-cyan font-display text-sm py-3 rounded-lg mt-2">
+                CONTINUER
+              </button>
             </div>
           )}
 

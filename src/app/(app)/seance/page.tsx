@@ -463,16 +463,21 @@ export default function SeancePage() {
                 C&apos;était comment&nbsp;?
                 <span className="text-technical ml-1">(RPE)</span>
               </p>
-              <div className="flex gap-1">
-                {cranLabels.map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={() => submitSlider(exoIdx, c.value)}
-                    className="flex-1 py-2 rounded-lg text-xs font-display border transition-all bg-gymx-bg2 border-gymx-border text-gymx-muted hover:border-gymx-magenta hover:text-gymx-magenta"
-                  >
-                    {c.label}
-                  </button>
-                ))}
+              <div className="flex gap-1.5">
+                {cranLabels.map((c, ci) => {
+                  const colors = ["bg-green-500/20 border-green-500/40 text-green-400", "bg-lime-500/20 border-lime-500/40 text-lime-400", "bg-yellow-500/20 border-yellow-500/40 text-yellow-400", "bg-orange-500/20 border-orange-500/40 text-orange-400", "bg-red-500/20 border-red-500/40 text-red-400"];
+                  return (
+                    <button
+                      key={c.value}
+                      onClick={() => submitSlider(exoIdx, c.value)}
+                      className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all bg-gymx-bg2 border-gymx-border text-gymx-muted hover:scale-105 active:scale-95"
+                    >
+                      <span className={`w-full h-1 rounded-full transition-all ${colors[ci].split(" ")[0]} opacity-40`} />
+                      <span className="text-[10px] font-display leading-tight">{c.label}</span>
+                      <span className="text-[8px] text-gymx-muted/50">{c.rpe}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

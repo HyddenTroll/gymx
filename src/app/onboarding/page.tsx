@@ -88,7 +88,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (step === "exclus" && exercices.length === 0) {
-      supabase.from("exercices").select("id, nom_fr, groupe").order("groupe").order("nom_fr").then(({ data }) => {
+      supabase.from("exercices").select("id, nom_fr, groupe, image_url").order("groupe").order("nom_fr").then(({ data }) => {
         if (data) setExercices(data);
       });
     }
@@ -296,13 +296,20 @@ export default function OnboardingPage() {
                         <button
                           key={exo.id}
                           onClick={() => toggleExclus(exo.id)}
-                          className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg border text-sm transition-all ${
+                          className={`w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg border text-sm transition-all ${
                             state.exclus.includes(exo.id)
                               ? "border-gymx-magenta bg-gymx-magenta/10 text-gymx-magenta"
                               : "border-gymx-border bg-gymx-panel text-gymx-text"
                           }`}
                         >
-                          <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                          {exo.image_url ? (
+                            <img src={exo.image_url} alt="" className="w-9 h-9 rounded object-cover bg-gymx-bg2 shrink-0" loading="lazy" />
+                          ) : (
+                            <div className="w-9 h-9 rounded bg-gymx-bg2 flex items-center justify-center shrink-0">
+                              <span className="text-[10px] text-gymx-muted">?</span>
+                            </div>
+                          )}
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] shrink-0 ${
                             state.exclus.includes(exo.id)
                               ? "border-gymx-magenta bg-gymx-magenta text-white"
                               : "border-gymx-muted"

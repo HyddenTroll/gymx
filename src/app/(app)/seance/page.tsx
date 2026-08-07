@@ -208,12 +208,13 @@ export default function SeancePage() {
                 <p className="text-sm font-medium" style={{ color: "var(--color-gymx-text)" }}>
                   C&apos;était comment&nbsp;? <span style={{ color: "var(--color-gymx-muted)" }}>(RPE 1-10)</span>
                 </p>
-                <div className="flex gap-0.5 h-14 rounded-xl overflow-hidden touch-none select-none" style={{ backgroundColor: "var(--color-gymx-surface)" }}>
+                <div className="flex gap-1" style={{ touchAction: "manipulation" }}>
                   {rpeLabels.map((r) => (
-                    <button key={r.rpe} onPointerDown={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
-                      className="flex-1 relative active:opacity-80 touch-target" style={{ minWidth: 0, minHeight: "100%", touchAction: "manipulation" }}>
-                      <span className="absolute inset-0" style={{ backgroundColor: rpeColors[r.rpe - 1], opacity: 0.5 }} />
-                      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold" style={{ color: r.rpe >= 7 ? "#fff" : "#0a0a0b" }}>{r.rpe}</span>
+                    <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
+                      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-3 rounded-xl border touch-target"
+                      style={{ minHeight: 52, borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)" }}>
+                      <span className="w-full h-1 rounded-full" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />
+                      <span className="text-xs font-bold">{r.rpe}</span>
                     </button>
                   ))}
                 </div>

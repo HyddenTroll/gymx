@@ -179,7 +179,7 @@ export default function OnboardingPage() {
         if (!ok) throw new Error("Erreur lors de la création du programme");
       }
 
-      router.push("/seance");
+      router.push("/qg");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur lors de la sauvegarde");
     } finally {

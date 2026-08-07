@@ -27,6 +27,10 @@ export default function QGPage() {
   const [profil, setProfil] = useState<any>(null);
   const [projections, setProjections] = useState<Projection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [goals, setGoals] = useState<Record<string, number>>({});
+  const [goalModal, setGoalModal] = useState<{ exoId: string; nom: string; current: number } | null>(null);
+  const [goalInput, setGoalInput] = useState("");
+  const [programmeActif, setProgrammeActif] = useState<any>(null);
   const pathname = "/qg";
 
   useEffect(() => {
@@ -43,6 +47,12 @@ export default function QGPage() {
         if (p) setProfil(p);
         const projs = await calculerProjections(user.id);
         setProjections(projs);
+
+        const { data: prog } = await supabase.from("programme_actif").select("*").eq("user_id", user.id).maybeSingle();
+        if (prog) setProgrammeActif(prog);
+
+        const saved = localStorage.getItem("gymx_goals");
+        if (saved) setGoals(JSON.parse(saved));
       }
       setLoading(false);
     })();
@@ -73,6 +83,11 @@ export default function QGPage() {
                 <p className="text-xs mt-0.5" style={{ color: "var(--color-gymx-muted)" }}>
                   {profil.objectif === "force" ? "Force" : profil.objectif === "muscle" ? "Hypertrophie" : "Recomposition"} · {profil.jours_par_semaine}j/sem
                 </p>
+                {programmeActif && (
+                  <p className="text-[10px] mt-0.5 font-semibold" style={{ color: "var(--color-gymx-accent)" }}>
+                    {programmeActif.nom}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -223,12 +238,15 @@ export default function QGPage() {
 
         {projections.length > 0 && (
           <div className="card p-4 space-y-3">
-            <p className="label">Projections <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(rythme estimé)</span></p>
+            <p className="label">Projections <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(taper pour fixer un objectif)</span></p>
             {projections.map((p, i) => {
               const tendanceIcon = p.tendance === "hausse" ? "↗" : p.tendance === "baisse" ? "↘" : "→";
-              const fiabiliteColor = p.fiabilite === "elevee" ? "var(--color-gymx-muted)" : p.fiabilite === "moyenne" ? "var(--color-gymx-accent)" : "var(--color-gymx-accent)";
+              const fiabiliteColor = p.fiabilite === "elevee" ? "var(--color-gymx-muted)" : "var(--color-gymx-accent)";
+              const goal = goals[p.exercice_id];
+              const goalWeeks = goal && p.taux_ema > 0 ? Math.round((goal - p.charge_actuelle) / p.taux_ema) : null;
               return (
-                <div key={i} className="space-y-1.5 border-b pb-2" style={{ borderColor: "var(--color-gymx-border)" }}>
+                <div key={i} className="space-y-1.5 border-b pb-2 touch-target active:opacity-60" style={{ borderColor: "var(--color-gymx-border)" }}
+                  onClick={() => setGoalModal({ exoId: p.exercice_id, nom: p.nom, current: p.charge_actuelle })}>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1.5">
                       <span style={{ color: "var(--color-gymx-muted)" }}>{p.nom}</span>
@@ -247,10 +265,16 @@ export default function QGPage() {
                     <span>4 sem · {p.projection_4sem} kg</span>
                     <span>8 sem · {p.projection_8sem} kg</span>
                   </div>
-                  <div className="flex justify-between text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
-                    <span>Optimiste : {p.proj_optimiste} kg</span>
-                    <span>Pessimiste : {p.proj_pessimiste} kg</span>
-                  </div>
+                  {goal && (
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="font-semibold" style={{ color: "var(--color-gymx-accent)" }}>
+                        Objectif : {goal} kg
+                      </span>
+                      <span style={{ color: "var(--color-gymx-muted)" }}>
+                        {goalWeeks !== null ? `(~${goalWeeks} semaines)` : "Taux insuffisant"}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-[10px]">
                     <span className="font-semibold" style={{ color: fiabiliteColor }}>
                       Fiabilité : {p.fiabilite === "elevee" ? "Élevée" : p.fiabilite === "moyenne" ? "Moyenne" : "Faible"}
@@ -286,7 +310,68 @@ export default function QGPage() {
         )}
       </div>
 
-      <nav className="sticky bottom-0  border-t px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
+      {goalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 safe-area-top safe-area-bottom"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="card w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="card-title">Objectif — {goalModal.nom}</p>
+            <p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>
+              Actuel : <span className="font-mono font-semibold" style={{ color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }}>{goalModal.current} kg</span>
+            </p>
+            <input type="number" inputMode="decimal" placeholder="Poids cible (kg)"
+              value={goalInput} onChange={(e) => setGoalInput(e.target.value)}
+              className="input-field w-full" style={{ fontSize: "16px" }} />
+            {goalInput && parseFloat(goalInput) > goalModal.current && projections.find(p => p.exercice_id === goalModal.exoId) && (
+              (() => {
+                const p = projections.find(pr => pr.exercice_id === goalModal.exoId)!;
+                const target = parseFloat(goalInput);
+                const diff = target - p.charge_actuelle;
+                const weeks = p.taux_ema > 0 ? Math.round(diff / p.taux_ema) : null;
+                return (
+                  <div className="space-y-1">
+                    <p className="text-sm">
+                      {weeks !== null
+                        ? `~ ${weeks} semaines au rythme actuel`
+                        : "Pas assez de données pour estimer"}
+                    </p>
+                    {weeks !== null && (
+                      <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${Math.min((target / (p.charge_actuelle * 2)) * 100, 100)}%`, backgroundColor: "var(--color-gymx-accent)" }} />
+                      </div>
+                    )}
+                    <p className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>
+                      Fourchette estimée : {Math.round(target * 0.9)}–{Math.round(target * 1.1)} kg (marge d&apos;erreur ±10%)
+                    </p>
+                  </div>
+                );
+              })()
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setGoalModal(null)}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold touch-target"
+                style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+                Annuler
+              </button>
+              <button onClick={() => {
+                if (!goalInput || !goalModal) return;
+                const v = parseFloat(goalInput);
+                if (v <= 0) return;
+                const newGoals = { ...goals, [goalModal.exoId]: v };
+                setGoals(newGoals);
+                localStorage.setItem("gymx_goals", JSON.stringify(newGoals));
+                setGoalModal(null);
+                setGoalInput("");
+              }} disabled={!goalInput || parseFloat(goalInput) <= 0}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold touch-target disabled:opacity-30"
+                style={{ backgroundColor: "var(--color-gymx-accent)", color: "#0a0a0b" }}>
+                Fixer l&apos;objectif
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
           return (

@@ -12,6 +12,7 @@ const navItems = [
   { href: "/seance", label: "Séance", icon: Dumbbell },
   { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
   { href: "/progression", label: "Progression", icon: TrendingUp },
+  { href: "/profil", label: "Profil", icon: User },
 ];
 
 export default function BibliothequePage() {

@@ -10,45 +10,26 @@ import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, Us
 import type { Cran, Exercice } from "@/types";
 import Link from "next/link";
 
-interface SerieLog {
-  id?: string; exercice_id: string; reps: number; charge: number; validee: boolean; ordre: number;
-}
-
+interface SerieLog { id?: string; exercice_id: string; reps: number; charge: number; validee: boolean; ordre: number; }
 interface ExerciceEnCours {
   exercice: Exercice; structure_id: string; series_cibles: number; reps_cibles: number;
   charge_cible: number; role: string; fige: boolean;
-  series: SerieLog[]; slider: Cran | null; slider_submitted: boolean;
-  unite_actuelle: string;
+  series: SerieLog[]; slider: Cran | null; slider_submitted: boolean; unite_actuelle: string;
 }
 
 const unitesDisponibles = ["kg", "reps", "unité"];
 
 const rpeLabels = [
-  { rpe: 1, label: "Très facile" },
-  { rpe: 2, label: "Facile" },
-  { rpe: 3, label: "Assez facile" },
-  { rpe: 4, label: "Ça passe" },
-  { rpe: 5, label: "Confortable" },
-  { rpe: 6, label: "Un peu dur" },
-  { rpe: 7, label: "Dur" },
-  { rpe: 8, label: "Très dur" },
-  { rpe: 9, label: "À la limite" },
-  { rpe: 10, label: "Impossible" },
+  { rpe: 1, label: "Très facile" }, { rpe: 2, label: "Facile" }, { rpe: 3, label: "Assez facile" },
+  { rpe: 4, label: "Ça passe" }, { rpe: 5, label: "Confortable" }, { rpe: 6, label: "Un peu dur" },
+  { rpe: 7, label: "Dur" }, { rpe: 8, label: "Très dur" }, { rpe: 9, label: "À la limite" }, { rpe: 10, label: "Impossible" },
 ];
 
 function rpeToCran(rpe: number): Cran {
-  if (rpe <= 3) return "facile";
-  if (rpe <= 6) return "ca_passe";
-  if (rpe <= 8) return "dur";
-  if (rpe === 9) return "a_la_limite";
-  return "impossible";
+  if (rpe <= 3) return "facile"; if (rpe <= 6) return "ca_passe"; if (rpe <= 8) return "dur"; if (rpe === 9) return "a_la_limite"; return "impossible";
 }
 
-const rpeColors = [
-  "bg-green-500", "bg-green-500", "bg-lime-500", "bg-lime-400",
-  "bg-yellow-400", "bg-yellow-500", "bg-orange-400", "bg-orange-500",
-  "bg-red-500", "bg-red-600",
-];
+const rpeColors = ["bg-green-500","bg-green-500","bg-lime-500","bg-lime-400","bg-yellow-400","bg-yellow-500","bg-orange-400","bg-orange-500","bg-red-500","bg-red-600"];
 
 const resteRepos = (role: string, objectif?: string): number => {
   if (objectif === "force") return role === "principal" ? 210 : 120;
@@ -56,41 +37,29 @@ const resteRepos = (role: string, objectif?: string): number => {
 };
 
 const navItems = [
-  { href: "/qg", label: "QG", icon: BarChart3 },
-  { href: "/seance", label: "Séance", icon: Dumbbell },
-  { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
-  { href: "/progression", label: "Progression", icon: TrendingUp },
+  { href: "/qg", label: "QG", icon: BarChart3 }, { href: "/seance", label: "Séance", icon: Dumbbell },
+  { href: "/bibliotheque", label: "Bibliothèque", icon: Library }, { href: "/progression", label: "Progression", icon: TrendingUp },
+  { href: "/profil", label: "Profil", icon: User },
 ];
 
 export default function SeancePage() {
-  const router = useRouter();
-  const supabase = createClient();
-  const [loading, setLoading] = useState(true);
-  const [noProfil, setNoProfil] = useState(false);
-  const [noProgramme, setNoProgramme] = useState(false);
+  const router = useRouter(); const supabase = createClient();
+  const [loading, setLoading] = useState(true); const [noProfil, setNoProfil] = useState(false); const [noProgramme, setNoProgramme] = useState(false);
   const [seanceId, setSeanceId] = useState<string | null>(null);
   const [exercices, setExercices] = useState<ExerciceEnCours[]>([]);
-  const [chrono, setChrono] = useState<number | null>(null);
-  const [chronoRunning, setChronoRunning] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [chrono, setChrono] = useState<number | null>(null); const [chronoRunning, setChronoRunning] = useState(false); const [saving, setSaving] = useState(false);
   const pathname = "/seance";
 
   const chargerSeance = useCallback(async () => {
     const result = await getOrCreateSeanceDuJour();
-    if (!result) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
-      setNoProfil(true); setLoading(false); return;
-    }
+    if (!result) { const { data: { user } } = await supabase.auth.getUser(); if (!user) { router.push("/login"); return; } setNoProfil(true); setLoading(false); return; }
     setSeanceId(result.seance.id);
-
     if (result.nouvelle || result.exercices.length === 0) {
       const { data: prog } = await supabase.from("programme_actif").select("*").single();
       if (!prog) { setNoProgramme(true); setLoading(false); return; }
       const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
         .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
       if (!structures || structures.length === 0) { setNoProgramme(true); setLoading(false); return; }
-
       const exosAvecCharges: ExerciceEnCours[] = [];
       for (const s of structures) {
         const { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
@@ -98,20 +67,10 @@ export default function SeancePage() {
         if (exo) {
           const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", prog.user_id).eq("exercice_id", s.exercice_id).maybeSingle();
           chargeCible = charge?.charge_actuelle ?? 0;
-          if (!charge) {
-            await supabase.from("charges").insert({
-              user_id: prog.user_id, exercice_id: s.exercice_id, charge_actuelle: 0,
-              unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0,
-            });
-          }
+          if (!charge) { await supabase.from("charges").insert({ user_id: prog.user_id, exercice_id: s.exercice_id, charge_actuelle: 0, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 }); }
         }
-        const series = Array.from({ length: s.series_cibles }, (_, i) => ({
-          exercice_id: s.exercice_id, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i,
-        }));
-        exosAvecCharges.push({
-          exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles,
-          reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: null, slider_submitted: false, unite_actuelle: exo?.unite_par_defaut || "kg",
-        });
+        const series = Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: s.exercice_id, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
+        exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: null, slider_submitted: false, unite_actuelle: exo?.unite_par_defaut || "kg" });
       }
       setExercices(exosAvecCharges);
     } else {
@@ -120,11 +79,7 @@ export default function SeancePage() {
         const key = serie.exercice_id;
         if (!grouped.has(key)) {
           const { data: exo } = await supabase.from("exercices").select("*").eq("id", key).single();
-          const { data: prog } = await supabase.from("programme_actif").select("*").single();
-          grouped.set(key, {
-            exercice: exo || ({} as Exercice), structure_id: "", series_cibles: 0, reps_cibles: 0,
-            charge_cible: 0, role: "accessoire", fige: false, series: [], slider: null, slider_submitted: false, unite_actuelle: "kg",
-          });
+          grouped.set(key, { exercice: exo || ({} as Exercice), structure_id: "", series_cibles: 0, reps_cibles: 0, charge_cible: 0, role: "accessoire", fige: false, series: [], slider: null, slider_submitted: false, unite_actuelle: "kg" });
         }
         grouped.get(key)!.series.push({ id: serie.id, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, validee: serie.validee, ordre: serie.ordre });
       }
@@ -136,28 +91,19 @@ export default function SeancePage() {
   useEffect(() => { chargerSeance(); }, [chargerSeance]);
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (chronoRunning && chrono !== null && chrono > 0) {
-      interval = setInterval(() => { setChrono((p) => (p !== null ? Math.max(0, p - 1) : null)); }, 1000);
-    }
+    if (chronoRunning && chrono !== null && chrono > 0) { interval = setInterval(() => { setChrono((p) => (p !== null ? Math.max(0, p - 1) : null)); }, 1000); }
     if (chrono === 0) setChronoRunning(false);
     return () => clearInterval(interval);
   }, [chronoRunning, chrono]);
 
   const updateSerie = (exoIdx: number, serieIdx: number, updates: Partial<SerieLog>) => {
-    setExercices((prev) => {
-      const n = [...prev]; n[exoIdx] = { ...n[exoIdx], series: n[exoIdx].series.map((s, i) => i === serieIdx ? { ...s, ...updates } : s) }; return n;
-    });
+    setExercices((prev) => { const n = [...prev]; n[exoIdx] = { ...n[exoIdx], series: n[exoIdx].series.map((s, i) => i === serieIdx ? { ...s, ...updates } : s) }; return n; });
   };
 
   const toggleSerie = (exoIdx: number, serieIdx: number) => {
     const serie = exercices[exoIdx].series[serieIdx];
-    if (serie.validee) {
-      updateSerie(exoIdx, serieIdx, { validee: false });
-    } else {
-      updateSerie(exoIdx, serieIdx, { validee: true });
-      setChrono(resteRepos(exercices[exoIdx].role));
-      setChronoRunning(true);
-    }
+    if (serie.validee) { updateSerie(exoIdx, serieIdx, { validee: false }); }
+    else { updateSerie(exoIdx, serieIdx, { validee: true }); setChrono(resteRepos(exercices[exoIdx].role)); setChronoRunning(true); }
   };
 
   const formaterTemps = (s: number): string => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
@@ -167,55 +113,30 @@ export default function SeancePage() {
     const exo = exercices[exoIdx];
     setExercices((prev) => { const n = [...prev]; n[exoIdx] = { ...n[exoIdx], slider: cran, slider_submitted: true }; return n; });
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("effort").upsert({
-      user_id: user!.id, seance_id: seanceId, exercice_id: exo.exercice.id,
-      valeur: cran === "facile" ? 4 : cran === "ca_passe" ? 6 : cran === "dur" ? 8 : cran === "a_la_limite" ? 9 : 10, cran,
-    });
+    await supabase.from("effort").upsert({ user_id: user!.id, seance_id: seanceId, exercice_id: exo.exercice.id, valeur: cran === "facile" ? 4 : cran === "ca_passe" ? 6 : cran === "dur" ? 8 : cran === "a_la_limite" ? 9 : 10, cran });
     const { data: chargeData } = await supabase.from("charges").select("*").eq("user_id", user!.id).eq("exercice_id", exo.exercice.id).single();
     if (!chargeData) return;
     const { data: profil } = await supabase.from("profil").select("niveau").eq("user_id", user!.id).single();
-    const resultat = calculerProgression(cran, profil?.niveau || "intermediaire", {
-      unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs,
-    }, chargeData.charge_actuelle);
+    const resultat = calculerProgression(cran, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs }).eq("id", chargeData.id);
-    if (exo.role === "accessoire" && !exo.fige) {
-      await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige);
-    }
+    if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige); }
   };
 
   const sauverSeance = async () => {
     if (!seanceId) return; setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    for (const exo of exercices) {
-      for (const serie of exo.series) {
-        if (serie.validee) {
-          await supabase.from("series").upsert({
-            seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps,
-            charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre,
-          });
-        }
-      }
-    }
+    for (const exo of exercices) { for (const serie of exo.series) { if (serie.validee) { await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre }); } } }
     await supabase.from("seances").update({ terminee: true, duree: 0 }).eq("id", seanceId);
     setSaving(false); router.push("/qg");
   };
 
-  if (loading) return (
-    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
-      <p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p>
-    </div>
-  );
-
+  if (loading) return (<div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh" }}><p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p></div>);
   if (noProfil || noProgramme) return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-6" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
+    <div className="min-h-dvh flex flex-col items-center justify-center p-6" style={{ minHeight: "100dvh" }}>
       <div className="card w-full max-w-sm p-6 text-center space-y-3">
         <p className="card-title">{noProfil ? "Configure ton profil" : "Choisis un programme"}</p>
-        <button onClick={() => router.push("/onboarding")}
-          className="w-full font-semibold text-sm py-3.5 rounded-xl touch-target"
-          style={{ backgroundColor: "var(--color-gymx-text)", color: "var(--color-gymx-surface)" }}>
-          Commencer
-        </button>
+        <button onClick={() => router.push("/onboarding")} className="btn-primary w-full">Commencer</button>
       </div>
     </div>
   );
@@ -223,27 +144,20 @@ export default function SeancePage() {
   const toutValide = exercices.every((e) => e.series.every((s) => s.validee) && e.slider_submitted);
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
+    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh" }}>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="card-title">Séance du jour</h1>
-            <p className="label text-[10px]" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-gymx-muted)" }}>
-              {exercices.filter((e) => e.series.every((s) => s.validee)).length}/{exercices.length} exercices
-            </p>
+            <p className="label text-[10px]">{exercices.filter((e) => e.series.every((s) => s.validee)).length}/{exercices.length} exercices</p>
           </div>
-          <button onClick={sauverSeance} disabled={!toutValide || saving}
-            className="w-auto touch-target"
+          <button onClick={sauverSeance} disabled={!toutValide || saving} className="touch-target"
             style={{ backgroundColor: toutValide && !saving ? "var(--color-gymx-accent)" : "var(--color-gymx-fill)", color: toutValide && !saving ? "#0a0a0b" : "var(--color-gymx-muted)", fontWeight: 600, fontSize: "14px", padding: "10px 16px", borderRadius: "12px", border: "none" }}>
             {saving ? "Sauvegarde…" : "Terminer"}
           </button>
         </header>
 
-        {exercices.length === 0 && (
-          <div className="card p-6 text-center">
-            <p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>Aucun exercice pour aujourd&apos;hui.</p>
-          </div>
-        )}
+        {exercices.length === 0 && (<div className="card p-6 text-center"><p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>Aucun exercice pour aujourd&apos;hui.</p></div>)}
 
         {exercices.map((exo, exoIdx) => (
           <div key={exo.exercice.id} className="card p-4 space-y-3">
@@ -259,42 +173,31 @@ export default function SeancePage() {
 
             <div className="space-y-1.5">
               {exo.series.map((serie, serieIdx) => (
-                <div key={serieIdx} className="flex items-center gap-1.5 p-2 rounded-xl"
-                  style={{ backgroundColor: serie.validee ? "rgba(245,158,11,0.08)" : "var(--color-gymx-bg)" }}>
+                <div key={serieIdx} className="flex items-center gap-1.5 p-2 rounded-xl" style={{ backgroundColor: serie.validee ? "rgba(245,158,11,0.08)" : "var(--color-gymx-bg)" }}>
                   <span className="text-xs font-mono w-5 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{serieIdx + 1}</span>
                   <div className="flex-1 flex items-center gap-1.5">
-                    <input type="number" value={serie.reps} onChange={(e) => updateSerie(exoIdx, serieIdx, { reps: Number(e.target.value) || 0 })}
-                      disabled={serie.validee} inputMode="numeric"
-                      className="w-14 border rounded px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
+                    <input type="number" value={serie.reps} onChange={(e) => updateSerie(exoIdx, serieIdx, { reps: Number(e.target.value) || 0 })} disabled={serie.validee} inputMode="numeric"
+                      className="w-14 border rounded-xl px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
                       style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
                     <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>réps</span>
                     {exo.unite_actuelle !== "reps" && (
-                      <input type="number" value={serie.charge} onChange={(e) => updateSerie(exoIdx, serieIdx, { charge: Number(e.target.value) || 0 })}
-                        disabled={serie.validee} inputMode="decimal"
-                        className="w-16 border rounded px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
+                      <input type="number" value={serie.charge} onChange={(e) => updateSerie(exoIdx, serieIdx, { charge: Number(e.target.value) || 0 })} disabled={serie.validee} inputMode="decimal"
+                        className="w-16 border rounded-xl px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
                         style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
                     )}
-                    <div className="flex gap-0.5">
-                      {unitesDisponibles.map((u) => (
-                        <button key={u} onClick={() => {
-                          setExercices((prev) => {
-                            const n = [...prev]; n[exoIdx] = { ...n[exoIdx], unite_actuelle: u }; return n;
-                          });
-                        }}
-                          className="text-[9px] px-1.5 py-0.5 rounded font-semibold transition-colors touch-target"
-                          style={{
-                            backgroundColor: exo.unite_actuelle === u ? "var(--color-gymx-accent)" : "var(--color-gymx-border)",
-                            color: exo.unite_actuelle === u ? "#0a0a0b" : "var(--color-gymx-muted)",
-                          }}>
-                          {u}
-                        </button>
-                      ))}
-                    </div>
+                    <button onClick={() => {
+                      const idx = unitesDisponibles.indexOf(exo.unite_actuelle);
+                      const next = unitesDisponibles[(idx + 1) % unitesDisponibles.length];
+                      setExercices((prev) => { const n = [...prev]; n[exoIdx] = { ...n[exoIdx], unite_actuelle: next }; return n; });
+                    }} className="text-[10px] font-semibold px-2 py-1 rounded transition-colors touch-target h-8"
+                      style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-text)" }}>
+                      {exo.unite_actuelle}
+                    </button>
                   </div>
                   <button onClick={() => toggleSerie(exoIdx, serieIdx)}
-                    className="p-2 rounded-full transition-all active:scale-90 touch-target"
+                    className="w-9 h-9 flex items-center justify-center rounded-full transition-all active:scale-90 touch-target shrink-0"
                     style={{ backgroundColor: serie.validee ? "var(--color-gymx-accent)" : "var(--color-gymx-border)", color: serie.validee ? "#0a0a0b" : "var(--color-gymx-muted)" }}>
-                    {serie.validee ? "✕" : <Check className="w-4 h-4" />}
+                    {serie.validee ? <span className="text-xs font-bold">✕</span> : <Check className="w-4 h-4" />}
                   </button>
                 </div>
               ))}
@@ -305,36 +208,22 @@ export default function SeancePage() {
                 <p className="text-sm font-medium" style={{ color: "var(--color-gymx-text)" }}>
                   C&apos;était comment&nbsp;? <span style={{ color: "var(--color-gymx-muted)" }}>(RPE 1-10)</span>
                 </p>
-                <div className="flex gap-0.5 h-12 rounded-xl overflow-hidden"
-                  style={{ backgroundColor: "var(--color-gymx-surface)" }}>
+                <div className="flex gap-0.5 h-14 rounded-xl overflow-hidden touch-none select-none" style={{ backgroundColor: "var(--color-gymx-surface)" }}>
                   {rpeLabels.map((r) => (
-                    <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
-                      className="flex-1 relative transition-all active:opacity-80 touch-target"
-                      style={{ minWidth: 0, minHeight: "100%" }}>
-                      <span className="absolute inset-0 transition-opacity" style={{
-                        backgroundColor: rpeColors[r.rpe - 1],
-                        opacity: 0.6,
-                      }} />
-                      <span className="absolute bottom-0 left-0 right-0 h-0 transition-all"
-                        style={{ backgroundColor: rpeColors[r.rpe - 1], height: "100%" }} />
-                      <span className="absolute inset-0 flex items-end justify-center pb-1 text-[9px] font-bold"
-                        style={{ color: r.rpe >= 7 ? "#fff" : "#0a0a0b" }}>
-                        {r.rpe}
-                      </span>
+                    <button key={r.rpe} onPointerDown={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
+                      className="flex-1 relative active:opacity-80 touch-target" style={{ minWidth: 0, minHeight: "100%", touchAction: "manipulation" }}>
+                      <span className="absolute inset-0" style={{ backgroundColor: rpeColors[r.rpe - 1], opacity: 0.5 }} />
+                      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold" style={{ color: r.rpe >= 7 ? "#fff" : "#0a0a0b" }}>{r.rpe}</span>
                     </button>
                   ))}
                 </div>
                 <div className="flex justify-between px-0.5 text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
-                  <span>Facile (~4)</span>
-                  <span>Dur (8)</span>
-                  <span>Impossible (10)</span>
+                  <span>Facile (~4)</span><span>Dur (8)</span><span>Impossible (10)</span>
                 </div>
               </div>
             )}
 
-            {exo.slider_submitted && (
-              <p className="text-xs text-center" style={{ color: "var(--color-gymx-accent)" }}>✓ Effort enregistré</p>
-            )}
+            {exo.slider_submitted && (<p className="text-xs text-center" style={{ color: "var(--color-gymx-accent)" }}>✓ Effort enregistré</p>)}
           </div>
         ))}
 
@@ -343,30 +232,25 @@ export default function SeancePage() {
             style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)", borderColor: chrono <= 10 ? "var(--color-gymx-accent)" : "var(--color-gymx-border)" }}>
             <Timer className="w-5 h-5 shrink-0" style={{ color: chrono <= 10 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }} />
             <span className="font-mono font-bold text-lg" style={{ color: chrono <= 10 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }}>{formaterTemps(chrono)}</span>
-            <button onClick={() => setChronoRunning(!chronoRunning)} className="p-1.5 touch-target rounded-xl transition-colors"
-              style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-text)" }}>
+            <button onClick={() => setChronoRunning(!chronoRunning)} className="p-1.5 touch-target rounded-xl transition-colors" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-text)" }}>
               {chronoRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
-            <button onClick={() => setChrono(0)} className="p-1.5 touch-target rounded-xl transition-colors"
-              style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+            <button onClick={() => setChrono(0)} className="p-1.5 touch-target rounded-xl transition-colors" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
               <span className="text-xs font-semibold px-1">✕</span>
             </button>
           </div>
         )}
       </div>
 
-      <nav className="sticky bottom-0  border-t px-2 py-1 flex justify-around items-center z-50"
+      <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50"
         style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href}
-              className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-              style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
-              <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
-              <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
-            </Link>
-          );
+          return (<Link key={item.href} href={item.href} className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
+            style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+            <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
+            <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
+          </Link>);
         })}
       </nav>
     </div>

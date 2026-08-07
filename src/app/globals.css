@@ -1,26 +1,109 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-gymx-bg: #07070d;
+  --color-gymx-bg2: #0d0d18;
+  --color-gymx-cyan: #00e5ff;
+  --color-gymx-violet: #8b5cf6;
+  --color-gymx-magenta: #ff2d95;
+  --color-gymx-text: #e7ecff;
+  --color-gymx-muted: #8891b8;
+  --color-gymx-panel: rgba(13, 13, 24, 0.85);
+  --color-gymx-border: rgba(0, 229, 255, 0.15);
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-gymx-bg);
+  color: var(--color-gymx-text);
+  font-family: var(--font-body);
+  font-weight: 500;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@utility hud-panel {
+  background: var(--color-gymx-panel);
+  border: 1px solid var(--color-gymx-border);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+
+@utility hud-glow-cyan {
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+@utility hud-glow-violet {
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+}
+
+@utility hud-glow-magenta {
+  box-shadow: 0 0 12px rgba(255, 45, 149, 0.3);
+}
+
+@utility text-technical {
+  font-size: 0.7rem;
+  color: var(--color-gymx-muted);
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes xp-fill {
+  from { width: 0%; }
+}
+
+.animate-xp-fill {
+  animation: xp-fill 0.8s ease-out;
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

@@ -16,45 +16,63 @@ export function useAuth() {
     setError(null);
 
     try {
+      console.log("[auth] createClient...");
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      console.log("[auth] signInWithPassword...");
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: ADMIN_EMAIL,
         password: code,
       });
+      console.log("[auth] signIn result:", { data, signInError });
 
       if (signInError) {
+        console.log("[auth] signIn error:", signInError.message);
         if (signInError.message.includes("Invalid login credentials")) {
+          console.log("[auth] trying signUp...");
           const { error: signUpError } = await supabase.auth.signUp({
             email: ADMIN_EMAIL,
             password: code,
-            options: { data: { role: "owner" } },
+            options: { data: { role: "owner" }, emailRedirectTo: undefined },
           });
+          console.log("[auth] signUp result:", { signUpError });
 
           if (signUpError) {
-            setError(signUpError.message);
+            const msg = signUpError.message || "Erreur inconnue";
+            console.log("[auth] signUp error:", msg);
+            setError(msg);
             setLoading(false);
             return false;
           }
+          console.log("[auth] signUp success, redirecting...");
         } else {
-          setError(signInError.message);
+          const msg = signInError.message || "Erreur inconnue";
+          console.log("[auth] other signin error:", msg);
+          setError(msg);
           setLoading(false);
           return false;
         }
       }
 
       setLoading(false);
+      console.log("[auth] redirecting to onboarding...");
       router.push("/onboarding");
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur de connexion");
+      const msg = e instanceof Error ? e.message : "Erreur de connexion";
+      console.log("[auth] catch:", msg, e);
+      setError(msg);
       setLoading(false);
       return false;
     }
   };
 
   const signOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("[auth] signout error:", e);
+    }
     router.push("/login");
   };
 

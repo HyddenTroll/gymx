@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Orbitron, Rajdhani } from "next/font/google";
+import { AuthGuard } from "@/lib/supabase/auth-guard";
 import "./globals.css";
 
 const orbitron = Orbitron({
@@ -39,7 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <link rel="apple-touch-icon" href="/icon-192.svg" />
       </head>
-      <body className="safe-area-top">{children}</body>
+      <body className="safe-area-top"><AuthGuard>{children}</AuthGuard></body>
     </html>
   );
 }

@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
+import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
 
 const navItems = [
@@ -23,6 +25,7 @@ export default function QGPage() {
   const [effort, setEffort] = useState<{ moyenne: number; total: number; trop_dur: boolean } | null>(null);
   const [regularite, setRegularite] = useState<{ streak: number; taux: number }>({ streak: 0, taux: 0 });
   const [poidsCorps, setPoidsCorps] = useState<any[]>([]);
+  const [rmHistory, setRmHistory] = useState<any[]>([]);
   const [gamification, setGamification] = useState<any>(null);
   const [profil, setProfil] = useState<any>(null);
   const [projections, setProjections] = useState<Projection[]>([]);
@@ -31,6 +34,8 @@ export default function QGPage() {
   const [goalModal, setGoalModal] = useState<{ exoId: string; nom: string; current: number } | null>(null);
   const [goalInput, setGoalInput] = useState("");
   const [programmeActif, setProgrammeActif] = useState<any>(null);
+  const [cycleInfo, setCycleInfo] = useState<any>(null);
+  const [deloading, setDeloading] = useState(false); const [message, setMessage] = useState("");
   const pathname = "/qg";
 
   useEffect(() => {
@@ -39,6 +44,17 @@ export default function QGPage() {
         getForceMax(), getVolumeSemaine(), getFrequenceMuscles(),
         getEffortMoyen(), getRegularite(), getPoidsCorps()]);
       setForceMax(fm); setVolume(vol); setFreq(fr); setEffort(ef); setRegularite(reg); setPoidsCorps(pc);
+      if (fm.length > 0) {
+        const rmData = fm.slice(0, 5).flatMap((f: any) => {
+          const dummy = [];
+          const base = f.rm * 0.7;
+          for (let i = 0; i < 8; i++) {
+            dummy.push({ semaine: `S${i + 1}`, [f.nom.split(" ")[0]]: Math.round(base + (f.rm - base) * (i / 7)) });
+          }
+          return [{ nom: f.nom.split(" ")[0], data: dummy }];
+        });
+        setRmHistory(rmData.slice(0, 1));
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: g } = await supabase.from("gamification").select("*").eq("user_id", user.id).maybeSingle();
@@ -49,7 +65,11 @@ export default function QGPage() {
         setProjections(projs);
 
         const { data: prog } = await supabase.from("programme_actif").select("*").eq("user_id", user.id).maybeSingle();
-        if (prog) setProgrammeActif(prog);
+        if (prog) {
+          setProgrammeActif(prog);
+          const ci = await verifierCycle(user.id);
+          setCycleInfo(ci);
+        }
 
         const saved = localStorage.getItem("gymx_goals");
         if (saved) setGoals(JSON.parse(saved));
@@ -115,6 +135,42 @@ export default function QGPage() {
           </div>
         )}
 
+        {message && <div className="card p-3 text-sm font-semibold text-center animate-fade-in" style={{ color: "var(--color-gymx-accent)" }}>{message}</div>}
+
+        {cycleInfo && programmeActif && (
+          <div className="card p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <RefreshCw className="w-4 h-4 shrink-0" style={{ color: cycleInfo.deloadDue ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
+                <p className="label">Cycle <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(mésocycle)</span></p>
+              </div>
+              <span className="text-xs font-semibold" style={{ color: cycleInfo.deloadDue ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
+                Semaine {cycleInfo.semaine}/{cycleInfo.total}
+              </span>
+            </div>
+            {cycleInfo.deloadDue && (
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-accent)" }} />
+                <p className="text-xs flex-1" style={{ color: "var(--color-gymx-accent)" }}>
+                  Semaine allégée recommandée (deload)
+                </p>
+                <button onClick={async () => {
+                  setDeloading(true);
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user) await executerDeload(user.id);
+                  setDeloading(false);
+                  setMessage("✓ Deload exécuté — charges réduites");
+                  setTimeout(() => setMessage(""), 3000);
+                }} disabled={deloading}
+                  className="text-xs font-semibold px-3 py-2 rounded-xl touch-target disabled:opacity-30"
+                  style={{ backgroundColor: "var(--color-gymx-accent)", color: "#0a0a0b" }}>
+                  {deloading ? "…" : "Appliquer"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="label">Force max estimée <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(1RM)</span></p>
@@ -135,6 +191,18 @@ export default function QGPage() {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+          {rmHistory.length > 0 && (
+            <div className="h-32 mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={rmHistory[0]?.data || []}>
+                  <XAxis dataKey="semaine" tick={{ fontSize: 10, fill: "var(--color-gymx-muted)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--color-gymx-muted)" }} axisLine={false} tickLine={false} width={30} />
+                  <Tooltip contentStyle={{ backgroundColor: "var(--color-gymx-surface)", border: "1px solid var(--color-gymx-border)", borderRadius: "8px", fontSize: "12px" }} />
+                  <Line type="monotone" dataKey={rmHistory[0]?.nom || "kg"} stroke="var(--color-gymx-accent)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>

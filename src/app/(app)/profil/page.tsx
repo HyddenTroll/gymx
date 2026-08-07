@@ -110,7 +110,7 @@ export default function ProfilPage() {
               <div className="flex gap-1.5">
                 {niveaux.map((n) => (
                   <button key={n} onClick={() => setForm({ ...form, niveau: n })}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors touch-target"
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors touch-target"
                     style={{ backgroundColor: form.niveau === n ? "var(--color-gymx-accent)" : "var(--color-gymx-surface)", color: form.niveau === n ? "#fff" : "var(--color-gymx-text)", borderColor: form.niveau === n ? "var(--color-gymx-accent)" : "var(--color-gymx-border)" }}>
                     {n === "debutant" ? "Débutant" : n === "intermediaire" ? "Intermédiaire" : "Avancé"}
                   </button>
@@ -120,7 +120,7 @@ export default function ProfilPage() {
               <div className="flex gap-1.5">
                 {joursOpts.map((j) => (
                   <button key={j} onClick={() => setForm({ ...form, jours_par_semaine: j })}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors touch-target"
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors touch-target"
                     style={{ backgroundColor: form.jours_par_semaine === j ? "var(--color-gymx-accent)" : "var(--color-gymx-surface)", color: form.jours_par_semaine === j ? "#fff" : "var(--color-gymx-text)", borderColor: form.jours_par_semaine === j ? "var(--color-gymx-accent)" : "var(--color-gymx-border)" }}>
                     {j}j
                   </button>
@@ -130,7 +130,7 @@ export default function ProfilPage() {
               <div className="flex gap-1.5">
                 {objectifs.map((o) => (
                   <button key={o} onClick={() => setForm({ ...form, objectif: o })}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors touch-target"
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors touch-target"
                     style={{ backgroundColor: form.objectif === o ? "var(--color-gymx-accent)" : "var(--color-gymx-surface)", color: form.objectif === o ? "#fff" : "var(--color-gymx-text)", borderColor: form.objectif === o ? "var(--color-gymx-accent)" : "var(--color-gymx-border)" }}>
                     {o === "force" ? "Force" : o === "muscle" ? "Muscle" : "Recomposition"}
                   </button>
@@ -140,19 +140,19 @@ export default function ProfilPage() {
               <div className="flex gap-1.5">
                 {materiels.map((m) => (
                   <button key={m} onClick={() => setForm({ ...form, materiel: m })}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors touch-target"
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors touch-target"
                     style={{ backgroundColor: form.materiel === m ? "var(--color-gymx-accent)" : "var(--color-gymx-surface)", color: form.materiel === m ? "#fff" : "var(--color-gymx-text)", borderColor: form.materiel === m ? "var(--color-gymx-accent)" : "var(--color-gymx-border)" }}>
                     {m === "salle" ? "Salle" : m === "halteres" ? "Haltères" : "Corps"}
                   </button>
                 ))}
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setEditing(false)} className="flex-1 py-3 rounded-lg text-sm font-semibold border touch-target"
+                <button onClick={() => setEditing(false)} className="flex-1 py-3 rounded-xl text-sm font-semibold border touch-target"
                   style={{ borderColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
                   Annuler
                 </button>
                 <button onClick={handleSaveProfil} disabled={saving}
-                  className="flex-1 py-3 rounded-lg text-sm font-semibold touch-target"
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold touch-target"
                   style={{ backgroundColor: "var(--color-gymx-fill-strong)", color: "var(--color-gymx-surface)" }}>
                   {saving ? "…" : "Enregistrer"}
                 </button>
@@ -167,7 +167,7 @@ export default function ProfilPage() {
                 <div className="flex justify-between text-sm"><span style={{ color: "var(--color-gymx-muted)" }}>Matériel</span><span>{profil?.materiel === "salle" ? "Salle" : profil?.materiel === "halteres" ? "Haltères" : "Corps"}</span></div>
               </div>
               <button onClick={() => setEditing(true)}
-                className="w-full py-3 rounded-lg text-sm font-semibold touch-target"
+                className="w-full py-3 rounded-xl text-sm font-semibold touch-target"
                 style={{ backgroundColor: "var(--color-gymx-fill)", color: "var(--color-gymx-text)" }}>
                 Modifier
               </button>
@@ -183,10 +183,10 @@ export default function ProfilPage() {
           <div className="flex items-center gap-2">
             <input type="number" inputMode="decimal" step="0.1" placeholder="kg"
               value={nouveauPoids} onChange={(e) => setNouveauPoids(e.target.value)}
-              className="flex-1 border rounded-lg px-3 py-2.5 text-sm"
+              className="flex-1 border rounded-xl px-3 py-2.5 text-sm"
               style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
             <button onClick={handlePoids} disabled={!nouveauPoids}
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold touch-target disabled:opacity-30"
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold touch-target disabled:opacity-30"
               style={{ backgroundColor: "var(--color-gymx-fill-strong)", color: "var(--color-gymx-surface)" }}>
               Ajouter
             </button>
@@ -220,7 +220,7 @@ export default function ProfilPage() {
         </div>
 
         <button onClick={handleSignOut}
-          className="w-full py-3.5 rounded-lg text-sm font-semibold touch-target mt-2"
+          className="w-full py-3.5 rounded-xl text-sm font-semibold touch-target mt-2"
           style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
           Déconnexion
         </button>

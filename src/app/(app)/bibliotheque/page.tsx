@@ -70,7 +70,7 @@ export default function BibliothequePage() {
         <div className="flex gap-1.5">
           {equipements.map((eq) => (
             <button key={eq} onClick={() => setFiltreEquip(eq === filtreEquip ? null : eq)}
-              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-semibold border transition-colors touch-target  ${
+              className={`flex items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-semibold border transition-colors touch-target  ${
                 filtreEquip === eq ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted"
               }`}>
               {eq === "salle" ? "Salle" : eq === "halteres" ? "Haltères" : "Poids du corps"}
@@ -91,9 +91,9 @@ export default function BibliothequePage() {
             {exercices.map((exo: any) => (
               <div key={exo.id} className="card flex items-start gap-3 p-3">
                 {exo.image_url ? (
-                  <img src={exo.image_url} alt={exo.nom_fr} className="w-14 h-14 rounded-lg object-cover shrink-0" style={{ backgroundColor: "var(--color-gymx-bg)" }} loading="lazy" />
+                  <img src={exo.image_url} alt={exo.nom_fr} className="w-14 h-14 rounded-xl object-cover shrink-0" style={{ backgroundColor: "var(--color-gymx-bg)" }} loading="lazy" />
                 ) : (
-                  <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--color-gymx-bg)" }}>
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--color-gymx-bg)" }}>
                     <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-muted)" }}>?</span>
                   </div>
                 )}

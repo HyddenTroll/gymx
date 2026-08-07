@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/supabase/auth";
 import { useState, FormEvent } from "react";
+import { Dumbbell } from "lucide-react";
 
 export default function LoginPage() {
   const { signIn, loading, error } = useAuth();
@@ -13,22 +14,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-6 safe-area-top safe-area-bottom"
-      style={{ minHeight: "100dvh" }}>
-      <div className="w-full max-w-sm card p-8 space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="font-display font-bold text-[28px] tracking-tight text-gymx-text"
-            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>
+    <div className="min-h-dvh flex flex-col items-center justify-center px-4 safe-area-top safe-area-bottom" style={{ minHeight: "100dvh" }}>
+      <div className="w-full max-w-sm space-y-8 animate-fade-in">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl"
+            style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.05))", border: "1px solid rgba(245,158,11,0.2)" }}>
+            <Dumbbell className="w-7 h-7" style={{ color: "var(--color-gymx-accent)" }} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--color-gymx-text)" }}>
             GYMX
           </h1>
-          <p className="text-sm text-gymx-muted">Carnet de musculation</p>
+          <p className="text-sm" style={{ color: "var(--color-gymx-muted)" }}>Connecte-toi pour continuer</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1.5">
-            <label htmlFor="code" className="label">
-              Ton code
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="label" htmlFor="code">Ton code</label>
             <input
               id="code"
               type="password"
@@ -36,34 +37,26 @@ export default function LoginPage() {
               autoComplete="off"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Entre ton code personnel"
-              className="w-full border rounded-lg px-4 py-3 text-[16px] outline-none transition-colors"
-              style={{ borderColor: "var(--color-gymx-border)", color: "var(--color-gymx-text)", backgroundColor: "var(--color-gymx-bg)" }}
-              onFocus={(e) => e.target.style.borderColor = "var(--color-gymx-accent)"}
-              onBlur={(e) => e.target.style.borderColor = "var(--color-gymx-border)"}
+              placeholder="••••••••"
+              className="input-field w-full"
             />
           </div>
 
           {error && (
-            <p className="text-xs text-center leading-relaxed" style={{ color: "var(--color-gymx-accent)" }}>{error}</p>
+            <p className="text-xs text-center" style={{ color: "var(--color-gymx-accent)" }}>{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading || !code}
-            className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors disabled:opacity-30"
-            style={{
-              backgroundColor: loading || !code ? "var(--color-gymx-fill)" : "var(--color-gymx-fill-strong)",
-              color: loading || !code ? "var(--color-gymx-muted)" : "var(--color-gymx-surface)",
-              fontFamily: "var(--font-body)",
-            }}
+            className="btn-primary w-full disabled:opacity-30"
           >
             {loading ? "Connexion…" : "Se connecter"}
           </button>
         </form>
 
-        <p className="text-xs text-center leading-relaxed text-gymx-muted">
-          Première fois&nbsp;? Connecte-toi pour créer ton compte.
+        <p className="text-center text-sm" style={{ color: "var(--color-gymx-muted)" }}>
+          Première fois ? Connecte-toi pour créer ton compte.
         </p>
       </div>
     </div>

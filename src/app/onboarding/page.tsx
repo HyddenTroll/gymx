@@ -38,7 +38,7 @@ const stepNames: Record<Step, string> = {
   exclus: "Exercices à éviter", charges: "Charges de départ", programme: "Ton programme",
 };
 
-const BtnBase = "w-full text-left px-4 py-3.5 rounded-lg border transition-colors active:scale-[0.98] touch-target";
+const BtnBase = "w-full text-left px-4 py-3.5 rounded-xl border transition-colors active:scale-[0.98] touch-target";
 const BgSurface = "var(--color-gymx-surface)";
 const BgBg = "var(--color-gymx-bg)";
 const BorderC = "var(--color-gymx-border)";
@@ -119,7 +119,7 @@ export default function OnboardingPage() {
             <div className="grid grid-cols-2 gap-2">
               {joursOptions.map((n) => (
                 <button key={n} onClick={() => { update("jours_par_semaine", n); next(); }}
-                  className={`py-4 rounded-lg border text-center transition-colors active:scale-[0.98] touch-target ${state.jours_par_semaine === n ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border"}`}
+                  className={`py-4 rounded-xl border text-center transition-colors active:scale-[0.98] touch-target ${state.jours_par_semaine === n ? "border-gymx-accent bg-gymx-accent/5" : "border-gymx-border"}`}
                   style={{ backgroundColor: BgSurface }}>
                   <span className="hero-value text-2xl">{n}</span>
                   <p className="label mt-0.5">jours</p>
@@ -165,7 +165,7 @@ export default function OnboardingPage() {
                       <p className="label text-[10px] px-1">{groupe}</p>
                       {(exos as any[]).map((exo: any) => (
                         <button key={exo.id} onClick={() => toggleExclus(exo.id)}
-                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-colors active:scale-[0.98] touch-target ${state.exclus.includes(exo.id) ? "border-gymx-accent" : "border-gymx-border"}`}
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl border transition-colors active:scale-[0.98] touch-target ${state.exclus.includes(exo.id) ? "border-gymx-accent" : "border-gymx-border"}`}
                           style={{ backgroundColor: BgSurface }}>
                           {exo.image_url ? (
                             <img src={exo.image_url} alt="" className="w-9 h-9 rounded object-cover shrink-0" loading="lazy" style={{ backgroundColor: BgBg }} />
@@ -185,7 +185,7 @@ export default function OnboardingPage() {
                   ));
                 })()
               )}
-              <button onClick={next} className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors touch-target mt-1"
+              <button onClick={next} className="w-full font-semibold text-sm py-3.5 rounded-xl transition-colors touch-target mt-1"
                 style={{ backgroundColor: "var(--color-gymx-fill-strong)", color: "var(--color-gymx-surface)" }}>
                 {state.exclus.length > 0 ? `${state.exclus.length} exclus · Continuer` : "Aucun exclu · Continuer"}
               </button>
@@ -199,7 +199,7 @@ export default function OnboardingPage() {
                 <p className="text-xs text-center py-6" style={{ color: Muted }}>Chargement…</p>
               ) : (
                 chargesExos.map((exo: any) => (
-                  <div key={exo.id} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border" style={{ borderColor: BorderC, backgroundColor: BgSurface }}>
+                  <div key={exo.id} className="flex items-center gap-2 px-3 py-2.5 rounded-xl border" style={{ borderColor: BorderC, backgroundColor: BgSurface }}>
                     <span className="text-sm text-gymx-text flex-1 leading-tight">{exo.nom_fr}</span>
                     <input type="number" inputMode="decimal" placeholder="0"
                       value={state.charges[exo.id] ?? ""}
@@ -210,7 +210,7 @@ export default function OnboardingPage() {
                   </div>
                 ))
               )}
-              <button onClick={next} className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors touch-target mt-1"
+              <button onClick={next} className="w-full font-semibold text-sm py-3.5 rounded-xl transition-colors touch-target mt-1"
                 style={{ backgroundColor: "var(--color-gymx-fill-strong)", color: "var(--color-gymx-surface)" }}>
                 Continuer
               </button>
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
                   </div>
                   {error && <p className="text-xs text-center leading-relaxed" style={{ color: Accent }}>{error}</p>}
                   <button onClick={saveAndRedirect} disabled={saving}
-                    className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors disabled:opacity-30 touch-target"
+                    className="w-full font-semibold text-sm py-3.5 rounded-xl transition-colors disabled:opacity-30 touch-target"
                     style={{ backgroundColor: saving ? "var(--color-gymx-fill)" : "var(--color-gymx-fill-strong)", color: saving ? Muted : "var(--color-gymx-surface)" }}>
                     {saving ? "Création…" : "Commencer l'aventure"}
                   </button>
@@ -250,7 +250,7 @@ export default function OnboardingPage() {
           )}
 
           {step !== "niveau" && step !== "programme" && (
-            <button onClick={prev} className="w-full text-sm font-semibold py-3 border rounded-lg transition-colors touch-target"
+            <button onClick={prev} className="w-full text-sm font-semibold py-3 border rounded-xl transition-colors touch-target"
               style={{ borderColor: BorderC, color: Muted, backgroundColor: BgSurface }}>
               Retour
             </button>

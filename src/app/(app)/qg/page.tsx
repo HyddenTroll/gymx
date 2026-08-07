@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, Settings } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
@@ -66,9 +66,6 @@ export default function QGPage() {
             <p className="label">Tableau de bord</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/profil" className="p-2 -mr-2 touch-target">
-              <Settings className="w-5 h-5" style={{ color: "var(--color-gymx-muted)" }} />
-            </Link>
             {profil && (
               <div className="text-right">
                 <p className="label" style={{ fontSize: "10px" }}>{profil.niveau}</p>

@@ -1,5 +1,3 @@
-// Mapping slug -> video YouTube (tutoriel)
-// Sources : Alan Thrall, Jeff Nippard, Athlean-X, Calisthenicmovement
 const videos: Record<string, string> = {
   "developpe_couche_barre": "https://www.youtube.com/embed/vcBig73ojpE",
   "developpe_couche_halteres": "https://www.youtube.com/embed/VmB1G1K7v94",
@@ -11,7 +9,7 @@ const videos: Record<string, string> = {
   "developpe_incline_barre": "https://www.youtube.com/embed/8iP2nH0Tnq8",
   "developpe_incline_halteres": "https://www.youtube.com/embed/8iP2nH0Tnq8",
   "ecarte_incline_halteres": "https://www.youtube.com/embed/0Y48onBkz14",
-  "pompes_pieds_surélevés": "https://www.youtube.com/embed/IODxDxX7oi4",
+  "pompes_pieds_sureleves": "https://www.youtube.com/embed/IODxDxX7oi4",
   "developpe_militaire_barre": "https://www.youtube.com/embed/2yjwXTZQDDI",
   "developpe_militaire_halteres": "https://www.youtube.com/embed/2yjwXTZQDDI",
   "elevations_frontales": "https://www.youtube.com/embed/hRaoAxMM0Fs",
@@ -27,7 +25,7 @@ const videos: Record<string, string> = {
   "rowing_barre": "https://www.youtube.com/embed/9efZPW3N1X8",
   "rowing_haltere": "https://www.youtube.com/embed/pYcpY20QaE8",
   "tirage_horizontal_a_la_poulie": "https://www.youtube.com/embed/UCXxvVItLoM",
-  "rowing_tbar": "https://www.youtube.com/embed/j3Igk5nyZE4",
+  "rowing_t_bar": "https://www.youtube.com/embed/j3Igk5nyZE4",
   "shrugs_barre": "https://www.youtube.com/embed/c0eV7kRq2DQ",
   "shrugs_halteres": "https://www.youtube.com/embed/c0eV7kRq2DQ",
   "souleve_de_terre": "https://www.youtube.com/embed/1ZXobu7JvvE",

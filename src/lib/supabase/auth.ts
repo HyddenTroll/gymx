@@ -54,8 +54,15 @@ export function useAuth() {
       }
 
       setLoading(false);
-      console.log("[auth] redirecting to onboarding...");
-      router.push("/onboarding");
+
+      const { count } = await supabase
+        .from("profil")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", data?.user?.id || "");
+
+      const dejaConfigure = (count ?? 0) > 0;
+      console.log("[auth] redirecting to", dejaConfigure ? "/qg" : "/onboarding");
+      router.push(dejaConfigure ? "/qg" : "/onboarding");
       return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erreur de connexion";

@@ -64,6 +64,13 @@ export default function OnboardingPage() {
   const prev = () => { if (ci > 0) setStep(steps[ci - 1]); };
 
   useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { count } = await supabase.from("profil").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+        if ((count ?? 0) > 0) { router.push("/qg"); return; }
+      }
+    })();
     if (step === "exclus" && exercices.length === 0) {
       supabase.from("exercices").select("id, nom_fr, groupe, image_url").order("groupe").order("nom_fr").then(({ data }: any) => { if (data) setExercices(data); });
     }

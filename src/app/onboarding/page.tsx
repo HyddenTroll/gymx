@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { trouverMeilleurProgramme, creerProgramme } from "@/lib/programme/programme-service";
 import type { Niveau, Objectif, Materiel, Profil } from "@/types";
+import type { ProgrammeTemplate } from "@/lib/programme/templates";
 
 type Step =
   | "niveau"
@@ -69,6 +71,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [exercices, setExercices] = useState<any[]>([]);
   const [chargesExos, setChargesExos] = useState<any[]>([]);
+  const [programmeChoisi, setProgrammeChoisi] = useState<ProgrammeTemplate | null>(null);
 
   const update = <K extends keyof OnboardingState>(
     key: K,
@@ -166,6 +169,11 @@ export default function OnboardingPage() {
             });
           }
         }
+      }
+
+      if (programmeChoisi) {
+        const ok = await creerProgramme(user.id, programmeChoisi);
+        if (!ok) throw new Error("Erreur lors de la création du programme");
       }
 
       router.push("/seance");
@@ -370,14 +378,46 @@ export default function OnboardingPage() {
           {/* PROGRAMME */}
           {step === "programme" && (
             <div className="space-y-4">
-              {error && <p className="text-gymx-magenta text-sm text-center">{error}</p>}
-              <button
-                onClick={saveAndRedirect}
-                disabled={saving}
-                className="w-full bg-gymx-violet/10 border border-gymx-violet text-gymx-violet font-display font-bold py-3 rounded-lg hud-glow-violet hover:bg-gymx-violet/20 transition-all disabled:opacity-30"
-              >
-                {saving ? "CRÉATION…" : "COMMENCER L'AVENTURE"}
-              </button>
+              {(() => {
+                if (!programmeChoisi && state.niveau && state.objectif && state.jours_par_semaine && state.materiel) {
+                  const found = trouverMeilleurProgramme(
+                    state.niveau, state.objectif, state.jours_par_semaine, state.materiel
+                  );
+                  if (found && !programmeChoisi) setProgrammeChoisi(found);
+                }
+                return null;
+              })()}
+
+              {programmeChoisi ? (
+                <div className="space-y-3">
+                  <div className="hud-panel p-4 space-y-2 border-gymx-cyan">
+                    <h3 className="font-display text-sm text-gymx-cyan">{programmeChoisi.nom}</h3>
+                    <p className="text-xs text-gymx-muted">{programmeChoisi.description}</p>
+                    <div className="flex gap-2 pt-1">
+                      <span className="text-[10px] bg-gymx-cyan/10 text-gymx-cyan px-2 py-0.5 rounded">
+                        {programmeChoisi.jours_par_semaine}j/sem
+                      </span>
+                      <span className="text-[10px] bg-gymx-violet/10 text-gymx-violet px-2 py-0.5 rounded">
+                        {programmeChoisi.duree_semaines} sem
+                      </span>
+                    </div>
+                  </div>
+
+                  {error && <p className="text-gymx-magenta text-xs text-center">{error}</p>}
+
+                  <button
+                    onClick={saveAndRedirect}
+                    disabled={saving}
+                    className="w-full bg-gymx-violet/10 border border-gymx-violet text-gymx-violet font-display font-bold py-3 rounded-lg hud-glow-violet hover:bg-gymx-violet/20 transition-all disabled:opacity-30"
+                  >
+                    {saving ? "CRÉATION…" : "COMMENCER L'AVENTURE"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-gymx-muted text-xs text-center py-4">
+                  Aucun programme trouvé pour ton profil.
+                </p>
+              )}
             </div>
           )}
 

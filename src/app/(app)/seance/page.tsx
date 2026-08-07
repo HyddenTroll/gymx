@@ -208,19 +208,19 @@ export default function SeancePage() {
                 <p className="text-sm font-medium" style={{ color: "var(--color-gymx-text)" }}>
                   C&apos;était comment&nbsp;? <span style={{ color: "var(--color-gymx-muted)" }}>(RPE 1-10)</span>
                 </p>
-                <div className="flex gap-1" style={{ touchAction: "manipulation" }}>
+                <div className="flex gap-1 overflow-x-auto pb-1 overscroll-contain" style={{ touchAction: "pan-x" }}>
                   {rpeLabels.map((r) => (
                     <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
-                      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-3 rounded-xl border touch-target"
-                      style={{ minHeight: 52, borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)" }}>
-                      <span className="w-full h-1 rounded-full" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />
-                      <span className="text-xs font-bold">{r.rpe}</span>
+                      className="flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl border touch-target shrink-0"
+                      style={{ minHeight: 48, minWidth: 36, borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)" }}>
+                      <span className="w-5 h-1 rounded-full" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />
+                      <span className="text-[10px] font-bold">{r.rpe}</span>
                     </button>
                   ))}
                 </div>
-                <div className="flex justify-between px-0.5 text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
-                  <span>Facile (~4)</span><span>Dur (8)</span><span>Impossible (10)</span>
-                </div>
+                <p className="text-[10px] text-center" style={{ color: "var(--color-gymx-muted)" }}>
+                  Facile (~4) · Dur (8) · Impossible (10)
+                </p>
               </div>
             )}
 

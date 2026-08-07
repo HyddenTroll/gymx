@@ -305,24 +305,29 @@ export default function SeancePage() {
                 <p className="text-sm font-medium" style={{ color: "var(--color-gymx-text)" }}>
                   C&apos;était comment&nbsp;? <span style={{ color: "var(--color-gymx-muted)" }}>(RPE 1-10)</span>
                 </p>
-                <div className="flex gap-1">
+                <div className="flex gap-0.5 h-12 rounded-xl overflow-hidden"
+                  style={{ backgroundColor: "var(--color-gymx-surface)" }}>
                   {rpeLabels.map((r) => (
                     <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe))}
-                      className="flex-1 flex flex-col items-center py-2 rounded-xl transition-all active:scale-90 touch-target"
-                      style={{
-                        backgroundColor: "var(--color-gymx-surface)",
-                        border: "1px solid var(--color-gymx-border)",
-                      }}>
-                      <span className="w-full h-1 rounded-full mb-1" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />
-                      <span className="text-[10px] font-semibold leading-tight">{r.rpe}</span>
-                      <span className="text-[7px] leading-tight mt-0.5" style={{ color: "var(--color-gymx-muted)" }}>{r.label}</span>
+                      className="flex-1 relative transition-all active:opacity-80 touch-target"
+                      style={{ minWidth: 0, minHeight: "100%" }}>
+                      <span className="absolute inset-0 transition-opacity" style={{
+                        backgroundColor: rpeColors[r.rpe - 1],
+                        opacity: 0.6,
+                      }} />
+                      <span className="absolute bottom-0 left-0 right-0 h-0 transition-all"
+                        style={{ backgroundColor: rpeColors[r.rpe - 1], height: "100%" }} />
+                      <span className="absolute inset-0 flex items-end justify-center pb-1 text-[9px] font-bold"
+                        style={{ color: r.rpe >= 7 ? "#fff" : "#0a0a0b" }}>
+                        {r.rpe}
+                      </span>
                     </button>
                   ))}
                 </div>
-                <div className="flex justify-between px-1 text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
-                  <span>Facile</span>
-                  <span>Dur</span>
-                  <span>Impossible</span>
+                <div className="flex justify-between px-0.5 text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
+                  <span>Facile (~4)</span>
+                  <span>Dur (8)</span>
+                  <span>Impossible (10)</span>
                 </div>
               </div>
             )}

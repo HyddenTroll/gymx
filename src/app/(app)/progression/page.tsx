@@ -2,20 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { getPoidsCorps, getForceMax } from "@/lib/dashboard/dashboard-service";
-import { Trophy, Weight, TrendingUp, Activity } from "lucide-react";
+import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
-  { href: "/qg", label: "QG", icon: Activity },
-  { href: "/seance", label: "Séance", icon: TrendingUp },
-  { href: "/bibliotheque", label: "Bibliothèque", icon: Weight },
-  { href: "/progression", label: "Progression", icon: Trophy },
+  { href: "/qg", label: "QG", icon: BarChart3 },
+  { href: "/seance", label: "Séance", icon: Dumbbell },
+  { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
+  { href: "/progression", label: "Progression", icon: TrendingUp },
 ];
 
 export default function ProgressionPage() {
   const [poidsData, setPoidsData] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const pathname = "/progression";
 
   useEffect(() => {
     (async () => {
@@ -25,43 +26,47 @@ export default function ProgressionPage() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-dvh bg-gymx-bg flex items-center justify-center" style={{ minHeight: "100dvh" }}>
-      <p className="font-display text-sm text-gymx-muted animate-pulse-glow">CHARGEMENT…</p>
+    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+      <p className="text-sm font-semibold" style={{ color: "#6B6D72" }}>Chargement…</p>
     </div>
   );
 
   return (
-    <div className="min-h-dvh bg-gymx-bg flex flex-col" style={{ minHeight: "100dvh" }}>
-      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-3 safe-area-top">
+    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
         <header className="pt-1">
-          <h1 className="font-display text-lg text-gymx-cyan">Progression</h1>
-          <p className="text-gymx-muted text-xs">Poids du corps et records (PR)</p>
+          <h1 className="card-title">Progression</h1>
+          <p className="label">Poids du corps et records (PR)</p>
         </header>
 
-        <div className="hud-panel p-3 space-y-2">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center gap-1.5">
-            <Weight className="w-4 h-4 text-gymx-cyan shrink-0" />
-            <h2 className="text-sm text-gymx-text">Poids du corps</h2>
+            <Weight className="w-4 h-4 shrink-0" style={{ color: "#6B6D72" }} />
+            <p className="label">Poids du corps</p>
           </div>
           {poidsData.length === 0 ? (
-            <p className="text-xs text-gymx-muted leading-relaxed">Ajoute ton poids depuis le QG pour voir la courbe.</p>
+            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+              Ajoute ton poids depuis le QG pour voir ta courbe.
+            </p>
           ) : (
             <>
               <div className="flex items-end gap-2">
-                <span className="font-display text-3xl text-gymx-cyan">{poidsData[0].poids}</span>
-                <span className="text-sm text-gymx-muted mb-1">kg</span>
+                <span className="hero-value" style={{ fontSize: "2rem" }}>{poidsData[0].poids}</span>
+                <span className="text-sm mb-1" style={{ color: "#6B6D72" }}>kg</span>
                 {poidsData.length > 1 && (
-                  <span className={`text-xs mb-1 ${poidsData[0].poids > poidsData[poidsData.length - 1].poids ? "text-gymx-cyan" : "text-gymx-magenta"}`}>
-                    {poidsData[0].poids > poidsData[poidsData.length - 1].poids ? "+" : ""}
+                  <span className="text-xs mb-1 font-semibold" style={{
+                    color: poidsData[0].poids >= poidsData[poidsData.length - 1].poids ? "#E4002B" : "#6B6D72"
+                  }}>
+                    {poidsData[0].poids >= poidsData[poidsData.length - 1].poids ? "+" : ""}
                     {(poidsData[0].poids - poidsData[poidsData.length - 1].poids).toFixed(1)} kg
                   </span>
                 )}
               </div>
               <div className="space-y-1">
                 {poidsData.slice(0, 10).map((d: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between text-xs py-0.5">
-                    <span className="text-gymx-muted">{new Date(d.date).toLocaleDateString("fr-FR")}</span>
-                    <span className="text-gymx-text font-display">{d.poids} kg</span>
+                  <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                    <span style={{ color: "#6B6D72" }}>{new Date(d.date).toLocaleDateString("fr-FR")}</span>
+                    <span className="font-mono font-medium" style={{ color: "#17181A", fontFamily: "var(--font-mono)" }}>{d.poids} kg</span>
                   </div>
                 ))}
               </div>
@@ -69,24 +74,28 @@ export default function ProgressionPage() {
           )}
         </div>
 
-        <div className="hud-panel p-3 space-y-2">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center gap-1.5">
-            <Trophy className="w-4 h-4 text-gymx-magenta shrink-0" />
-            <h2 className="text-sm text-gymx-text">Records (PR)</h2>
+            <Trophy className="w-4 h-4 shrink-0" style={{ color: "#E4002B" }} />
+            <p className="label">Records <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(PR)</span></p>
           </div>
           {records.length === 0 ? (
-            <p className="text-xs text-gymx-muted leading-relaxed">Aucun record pour l&apos;instant. Termine ta première séance !</p>
+            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+              Tes records apparaîtront ici dès ta première séance loguée.
+            </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {records.map((r: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-1">
+                <div key={i} className="flex items-center justify-between">
                   <div className="flex-1 min-w-0 mr-2">
-                    <span className="text-sm text-gymx-text">{r.nom}</span>
-                    <p className="text-[10px] text-gymx-muted leading-tight">Meilleure série : {r.charge} kg × {r.reps} reps</p>
+                    <span className="text-sm font-semibold" style={{ fontFamily: "var(--font-body)", color: "#17181A" }}>{r.nom}</span>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B6D72" }}>
+                      Meilleure série&nbsp;: <span className="font-mono" style={{ fontFamily: "var(--font-mono)" }}>{r.charge} kg × {r.reps} reps</span>
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="font-display text-lg text-gymx-magenta">{r.rm}</span>
-                    <span className="text-[10px] text-gymx-muted ml-1">kg estimé</span>
+                    <span className="hero-value" style={{ fontSize: "1.5rem", color: "#E4002B" }}>{r.rm}</span>
+                    <span className="text-xs ml-1" style={{ color: "#6B6D72" }}>kg</span>
                   </div>
                 </div>
               ))}
@@ -95,14 +104,19 @@ export default function ProgressionPage() {
         </div>
       </div>
 
-      <nav className="sticky bottom-0 hud-panel mx-2 mb-1 px-1 py-1 flex justify-around items-center z-50" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
-        {navItems.map((item) => (
-          <Link key={item.href} href={item.href}
-            className="flex flex-col items-center gap-0.5 py-2 px-3 text-gymx-muted active:text-gymx-cyan transition-colors touch-target">
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-display">{item.label}</span>
-          </Link>
-        ))}
+      <nav className="sticky bottom-0 bg-white border-t px-2 py-1 flex justify-around items-center z-50"
+        style={{ borderColor: "#E2E2DE", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
+        {navItems.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link key={item.href} href={item.href}
+              className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
+              style={{ color: active ? "#E4002B" : "#6B6D72" }}>
+              <item.icon className="w-5 h-5" style={{ color: active ? "#E4002B" : "#6B6D72" }} />
+              <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

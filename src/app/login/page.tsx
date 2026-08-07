@@ -13,19 +13,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-4 safe-area-top safe-area-bottom"
-      style={{ minHeight: "100dvh" }}>
-      <div className="w-full max-w-sm hud-panel p-6 space-y-5">
+    <div className="min-h-dvh flex flex-col items-center justify-center p-6 safe-area-top safe-area-bottom"
+      style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+      <div className="w-full max-w-sm card p-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="font-display text-2xl font-bold text-gymx-cyan hud-glow-cyan">
+          <h1 className="font-display font-bold text-[28px] tracking-tight text-gymx-text"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>
             GYMX
           </h1>
-          <p className="text-gymx-muted text-sm">Carnet de musculation</p>
+          <p className="text-sm" style={{ color: "#6B6D72" }}>Carnet de musculation</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
-            <label htmlFor="code" className="text-sm text-gymx-text">
+            <label htmlFor="code" className="text-xs font-semibold tracking-[0.08em] uppercase"
+              style={{ color: "#6B6D72" }}>
               Ton code
             </label>
             <input
@@ -36,26 +38,33 @@ export default function LoginPage() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Entre ton code personnel"
-              className="w-full bg-gymx-bg2 border border-gymx-border rounded-lg px-4 py-3 text-gymx-text placeholder-gymx-muted/50 focus:outline-none focus:border-gymx-cyan transition-all"
-              style={{ fontSize: "16px" }}
+              className="w-full border rounded-lg px-4 py-3 text-[16px] outline-none transition-colors"
+              style={{ borderColor: "#E2E2DE", color: "#17181A", backgroundColor: "#F1F1EF" }}
+              onFocus={(e) => e.target.style.borderColor = "#E4002B"}
+              onBlur={(e) => e.target.style.borderColor = "#E2E2DE"}
             />
           </div>
 
           {error && (
-            <p className="text-gymx-magenta text-xs text-center leading-relaxed">{error}</p>
+            <p className="text-xs text-center leading-relaxed" style={{ color: "#E4002B" }}>{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading || !code}
-            className="w-full bg-gymx-cyan/10 border border-gymx-cyan text-gymx-cyan font-display font-bold py-3.5 rounded-lg active:bg-gymx-cyan/20 transition-colors disabled:opacity-30 disabled:active:bg-gymx-cyan/10"
+            className="w-full font-semibold text-sm py-3.5 rounded-lg transition-colors disabled:opacity-30"
+            style={{
+              backgroundColor: loading || !code ? "#D9D9D4" : "#17181A",
+              color: loading || !code ? "#6B6D72" : "#FFFFFF",
+              fontFamily: "var(--font-body)",
+            }}
           >
-            {loading ? "CONNEXION…" : "CONNEXION"}
+            {loading ? "Connexion…" : "Se connecter"}
           </button>
         </form>
 
-        <p className="text-gymx-muted text-xs text-center leading-relaxed">
-          Première fois ? Connecte-toi pour créer ton compte.
+        <p className="text-xs text-center leading-relaxed" style={{ color: "#6B6D72" }}>
+          Première fois&nbsp;? Connecte-toi pour créer ton compte.
         </p>
       </div>
     </div>

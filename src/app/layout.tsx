@@ -1,18 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Orbitron, Rajdhani } from "next/font/google";
+import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import { AuthGuard } from "@/lib/supabase/auth-guard";
 import "./globals.css";
 
-const orbitron = Orbitron({
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["400", "700", "900"],
+  weight: ["700", "800"],
   variable: "--font-display",
 });
 
-const rajdhani = Rajdhani({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-body",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -21,7 +27,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "GYMX",
   },
 };
@@ -31,17 +37,16 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#07070d",
+  themeColor: "#F1F1EF",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={`${orbitron.variable} ${rajdhani.variable}`}>
+    <html lang="fr" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="GYMX" />
-        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/icon-192.svg" />
       </head>
       <body className="safe-area-top safe-area-bottom">

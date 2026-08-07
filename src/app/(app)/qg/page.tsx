@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  getForceMax, getVolumeSemaine, getFrequenceMuscles,
-  getEffortMoyen, getRegularite, getPoidsCorps,
-} from "@/lib/dashboard/dashboard-service";
+import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
   { href: "/qg", label: "QG", icon: BarChart3 },
-  { href: "/seance", label: "Séance", icon: Zap },
-  { href: "/bibliotheque", label: "Bibliothèque", icon: Activity },
-  { href: "/progression", label: "Progression", icon: Trophy },
+  { href: "/seance", label: "Séance", icon: Dumbbell },
+  { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
+  { href: "/progression", label: "Progression", icon: TrendingUp },
 ];
 
 export default function QGPage() {
@@ -27,16 +24,14 @@ export default function QGPage() {
   const [gamification, setGamification] = useState<any>(null);
   const [profil, setProfil] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = "/qg";
 
   useEffect(() => {
     (async () => {
       const [fm, vol, fr, ef, reg, pc] = await Promise.all([
         getForceMax(), getVolumeSemaine(), getFrequenceMuscles(),
-        getEffortMoyen(), getRegularite(), getPoidsCorps(),
-      ]);
-      setForceMax(fm); setVolume(vol); setFreq(fr); setEffort(ef);
-      setRegularite(reg); setPoidsCorps(pc);
-
+        getEffortMoyen(), getRegularite(), getPoidsCorps()]);
+      setForceMax(fm); setVolume(vol); setFreq(fr); setEffort(ef); setRegularite(reg); setPoidsCorps(pc);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: g } = await supabase.from("gamification").select("*").eq("user_id", user.id).maybeSingle();
@@ -49,64 +44,76 @@ export default function QGPage() {
   }, [supabase]);
 
   if (loading) return (
-    <div className="min-h-dvh bg-gymx-bg flex items-center justify-center" style={{ minHeight: "100dvh" }}>
-      <p className="font-display text-sm text-gymx-muted animate-pulse-glow">CHARGEMENT…</p>
+    <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+      <p className="text-sm font-semibold" style={{ color: "#6B6D72" }}>Chargement…</p>
     </div>
   );
 
   const xpProgress = gamification ? ((gamification.xp % 100) / 100) * 100 : 0;
-  const nextLevel = gamification ? gamification.niveau + 1 : 1;
+  const niveaux = ["Recrue", "Apprenti", "Soldat", "Combattant", "Vétéran", "Élite", "Maître", "Légende"];
+  const rang = gamification ? niveaux[Math.min(gamification.niveau - 1, niveaux.length - 1)] : "Recrue";
 
   return (
-    <div className="min-h-dvh bg-gymx-bg flex flex-col" style={{ minHeight: "100dvh" }}>
-      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-3 safe-area-top">
-        <header className="flex items-center justify-between">
+    <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh", backgroundColor: "#F1F1EF" }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
+        <header className="flex items-start justify-between">
           <div>
-            <h1 className="font-display text-lg text-gymx-cyan">QG</h1>
-            <p className="text-gymx-muted text-xs">Tableau de bord</p>
+            <h1 className="card-title" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "17px", color: "#17181A" }}>QG</h1>
+            <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B6D72" }}>
+              Tableau de bord
+            </p>
           </div>
           {profil && (
             <div className="text-right">
-              <p className="text-[10px] font-display text-gymx-violet leading-tight">
-                {profil.objectif === "force" ? "FORCE" : profil.objectif === "muscle" ? "HYPERTROPHIE" : "RECOMPOSITION"}
+              <p className="label" style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B6D72" }}>
+                {profil.niveau}
               </p>
-              <p className="text-[9px] text-gymx-muted">{profil.niveau} · {profil.jours_par_semaine}j/sem</p>
+              <p className="text-xs mt-0.5" style={{ color: "#6B6D72" }}>
+                {profil.objectif === "force" ? "Force" : profil.objectif === "muscle" ? "Hypertrophie" : "Recomposition"} · {profil.jours_par_semaine}j/sem
+              </p>
             </div>
           )}
         </header>
 
         {gamification && (
-          <div className="hud-panel p-3 space-y-1.5">
+          <div className="card p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-gymx-cyan shrink-0" />
-                <span className="font-display text-sm text-gymx-text">Niveau {gamification.niveau}</span>
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 shrink-0" style={{ color: "#17181A" }} />
+                <span className="font-semibold text-sm" style={{ fontFamily: "var(--font-body)", color: "#17181A" }}>
+                  {rang} · Niveau {gamification.niveau}
+                </span>
               </div>
-              <span className="text-[10px] text-gymx-muted">Niv. {nextLevel} · {gamification.xp % 100}/100 XP</span>
+              <span className="text-xs font-semibold" style={{ color: "#6B6D72" }}>
+                {gamification.xp % 100}/100 XP
+              </span>
             </div>
-            <div className="h-1.5 bg-gymx-bg rounded-full overflow-hidden">
-              <div className="h-full bg-gymx-cyan rounded-full animate-xp-fill" style={{ width: `${xpProgress}%` }} />
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#D9D9D4" }}>
+              <div className="h-full rounded-full transition-all" style={{ width: `${xpProgress}%`, backgroundColor: "#2A2B2E" }} />
             </div>
             {gamification.streak > 0 && (
-              <p className="text-[10px] text-gymx-muted">🔥 {gamification.streak} séances d&apos;affilée</p>
+              <p className="text-xs" style={{ color: "#6B6D72" }}>{gamification.streak} séances d&apos;affilée</p>
             )}
           </div>
         )}
 
-        <div className="hud-panel p-3 space-y-1.5">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm text-gymx-text">Force max estimée <span className="text-technical">(1RM)</span></h2>
-            <Trophy className="w-4 h-4 text-gymx-magenta shrink-0" />
+            <p className="label">Force max estimée <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(1RM)</span></p>
+            {forceMax.length > 0 && <Trophy className="w-4 h-4 shrink-0" style={{ color: "#E4002B" }} />}
           </div>
           {forceMax.length === 0 ? (
-            <p className="text-xs text-gymx-muted leading-relaxed">Logue tes séances pour voir ta force max estimée.</p>
+            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+              Termine ta première séance pour voir ta force max estimée (1RM).
+            </p>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               {forceMax.slice(0, 5).map((f: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-0.5">
-                  <span className="text-xs text-gymx-muted truncate mr-2">{f.nom}</span>
-                  <span className="font-display text-sm text-gymx-cyan shrink-0">
-                    {f.rm} kg <span className="text-technical">({f.charge}×{f.reps})</span>
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: "#6B6D72" }}>{f.nom}</span>
+                  <span className="hero-value text-xl">
+                    {f.rm}
+                    <span className="text-xs font-mono font-medium ml-1" style={{ color: "#6B6D72", fontFamily: "var(--font-mono)" }}>kg</span>
                   </span>
                 </div>
               ))}
@@ -114,60 +121,62 @@ export default function QGPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="hud-panel p-3 space-y-1">
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-gymx-violet shrink-0" />
-              <span className="text-xs text-gymx-muted">Régularité</span>
-            </div>
-            <span className="font-display text-lg text-gymx-violet">{regularite.taux}%</span>
-            {regularite.streak > 0 && <p className="text-[10px] text-gymx-muted">🔥 {regularite.streak}j</p>}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card p-4 space-y-1">
+            <p className="label">Régularité</p>
+            <span className="hero-value" style={{ fontSize: "2rem" }}>{regularite.taux}%</span>
+            {regularite.streak > 0 && <p className="text-xs" style={{ color: "#6B6D72" }}>{regularite.streak}j de suite</p>}
           </div>
-          <div className="hud-panel p-3 space-y-1">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3 text-gymx-magenta shrink-0" />
-              <span className="text-xs text-gymx-muted">Séances faites</span>
-            </div>
-            <span className="font-display text-lg text-gymx-magenta">{regularite.streak}</span>
+          <div className="card p-4 space-y-1">
+            <p className="label">Séances</p>
+            <span className="hero-value" style={{ fontSize: "2rem" }}>{regularite.streak}</span>
+            <p className="text-xs" style={{ color: "#6B6D72" }}>faites</p>
           </div>
         </div>
 
-        <div className="hud-panel p-3 space-y-1.5">
-          <h2 className="text-sm text-gymx-text">Travail total <span className="text-technical">(volume)</span></h2>
+        <div className="card p-4 space-y-3">
+          <p className="label">Travail total <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(volume)</span></p>
           {volume.length === 0 ? (
-            <p className="text-xs text-gymx-muted leading-relaxed">Aucune donnée cette semaine.</p>
+            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+              Aucune série cette semaine. Lance ta séance du jour pour commencer à remplir la zone.
+            </p>
           ) : (
-            <div className="space-y-1">
-              {volume.map((v: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-0.5">
-                  <span className="text-xs text-gymx-muted">{v.groupe}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-xs text-gymx-text">{v.sets} séries</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                      v.status === "trop_peu" ? "bg-gymx-magenta/20 text-gymx-magenta" :
-                      v.status === "ideal" ? "bg-gymx-cyan/20 text-gymx-cyan" : "bg-gymx-magenta/20 text-gymx-magenta"
-                    }`}>{v.status === "trop_peu" ? "Trop peu" : v.status === "ideal" ? "Idéal" : "Trop"}</span>
+            <div className="space-y-2">
+              {volume.map((v: any, i: number) => {
+                const isIdeal = v.status === "ideal";
+                return (
+                  <div key={i} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span style={{ color: "#6B6D72" }}>{v.groupe}</span>
+                      <div className="flex items-center gap-2">
+                        <span style={{ color: "#17181A" }}>{v.sets} séries</span>
+                        {isIdeal && <span className="text-xs font-semibold" style={{ color: "#E4002B" }}>Idéal</span>}
+                      </div>
+                    </div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "#D9D9D4" }}>
+                      <div className="h-full rounded-full" style={{
+                        width: `${Math.min((v.sets / 20) * 100, 100)}%`,
+                        backgroundColor: isIdeal ? "#E4002B" : "#2A2B2E"
+                      }} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-          <p className="text-technical">Zone idéale: 10-20 séries/muscle par semaine</p>
+          <p className="text-xs" style={{ color: "#6B6D72" }}>Zone idéale&nbsp;: 10-20 séries/muscle par semaine</p>
         </div>
 
         {freq.length > 0 && (
-          <div className="hud-panel p-3 space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Target className="w-3 h-3 text-gymx-cyan shrink-0" />
-              <h2 className="text-sm text-gymx-text">Fréquence cette semaine</h2>
-            </div>
-            <div className="space-y-1">
+          <div className="card p-4 space-y-2">
+            <p className="label">Fréquence cette semaine</p>
+            <div className="space-y-1.5">
               {freq.map((f: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-0.5">
-                  <span className="text-xs text-gymx-muted">{f.groupe}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gymx-text">{f.fois}×</span>
-                    {f.ok ? <span className="text-[10px] text-gymx-cyan">✓ ≥2</span> : <span className="text-[10px] text-gymx-magenta">✗</span>}
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span style={{ color: "#6B6D72" }}>{f.groupe}</span>
+                  <div className="flex items-center gap-2">
+                    <span style={{ color: "#17181A" }}>{f.fois}×</span>
+                    {f.ok ? <span className="text-xs font-semibold" style={{ color: "#E4002B" }}>✓ ≥2</span> : <span className="text-xs" style={{ color: "#6B6D72" }}>✗</span>}
                   </div>
                 </div>
               ))}
@@ -176,15 +185,15 @@ export default function QGPage() {
         )}
 
         {effort && effort.total > 0 && (
-          <div className="hud-panel p-3 space-y-1.5">
-            <h2 className="text-sm text-gymx-text">Effort moyen <span className="text-technical">(RPE)</span></h2>
+          <div className="card p-4 space-y-2">
+            <p className="label">Effort moyen <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(RPE)</span></p>
             <div className="flex items-center gap-2">
-              <span className="font-display text-2xl text-gymx-violet">{effort.moyenne}</span>
-              <span className="text-xs text-gymx-muted">/10</span>
+              <span className="hero-value" style={{ fontSize: "2rem" }}>{effort.moyenne}</span>
+              <span className="text-sm" style={{ color: "#6B6D72" }}>/10</span>
               {effort.trop_dur && (
                 <div className="flex items-center gap-1 ml-auto">
-                  <AlertTriangle className="w-3 h-3 text-gymx-magenta shrink-0" />
-                  <span className="text-[10px] text-gymx-magenta leading-tight">Trop de séances À la limite/Impossible</span>
+                  <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: "#E4002B" }} />
+                  <span className="text-xs" style={{ color: "#E4002B" }}>Trop de séances à la limite</span>
                 </div>
               )}
             </div>
@@ -192,17 +201,16 @@ export default function QGPage() {
         )}
 
         {poidsCorps.length > 0 && (
-          <div className="hud-panel p-3 space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Weight className="w-3 h-3 text-gymx-cyan shrink-0" />
-              <h2 className="text-sm text-gymx-text">Poids du corps</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-display text-2xl text-gymx-cyan">{poidsCorps[0].poids}</span>
-              <span className="text-xs text-gymx-muted">kg</span>
+          <div className="card p-4 space-y-2">
+            <p className="label">Poids du corps</p>
+            <div className="flex items-end gap-2">
+              <span className="hero-value" style={{ fontSize: "2rem" }}>{poidsCorps[0].poids}</span>
+              <span className="text-sm mb-1" style={{ color: "#6B6D72" }}>kg</span>
               {poidsCorps.length > 1 && (
-                <span className={`text-xs ${poidsCorps[0].poids > poidsCorps[poidsCorps.length - 1].poids ? "text-gymx-magenta" : "text-gymx-cyan"}`}>
-                  {poidsCorps[0].poids > poidsCorps[poidsCorps.length - 1].poids ? "+" : ""}
+                <span className="text-xs mb-1 font-semibold" style={{
+                  color: poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "#E4002B" : "#6B6D72"
+                }}>
+                  {poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "+" : ""}
                   {(poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids).toFixed(1)} kg
                 </span>
               )}
@@ -210,23 +218,29 @@ export default function QGPage() {
           </div>
         )}
 
-        {forceMax.length === 0 && volume.length === 0 && effort === null && (
-          <div className="hud-panel p-6 text-center space-y-2">
-            <BarChart3 className="w-8 h-8 text-gymx-muted mx-auto" />
-            <p className="text-gymx-muted text-sm">Bienvenue sur GYMX !</p>
-            <p className="text-gymx-muted text-xs leading-relaxed">Complète ta première séance pour voir tes données apparaître ici.</p>
+        {forceMax.length === 0 && volume.length === 0 && !effort && (
+          <div className="card p-8 text-center space-y-2">
+            <BarChart3 className="w-8 h-8 mx-auto" style={{ color: "#D9D9D4" }} />
+            <p className="text-sm font-semibold" style={{ color: "#17181A" }}>Bienvenue sur GYMX</p>
+            <p className="text-sm leading-relaxed" style={{ color: "#6B6D72" }}>
+              Termine ta première séance pour voir tes données apparaître ici.
+            </p>
           </div>
         )}
       </div>
 
-      <nav className="sticky bottom-0 hud-panel mx-2 mb-1 px-1 py-1 flex justify-around items-center z-50" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
-        {navItems.map((item) => (
-          <Link key={item.href} href={item.href}
-            className="flex flex-col items-center gap-0.5 py-2 px-3 text-gymx-cyan active:text-gymx-cyan transition-colors touch-target">
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-display">{item.label}</span>
-          </Link>
-        ))}
+      <nav className="sticky bottom-0 bg-white border-t px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "#E2E2DE", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
+        {navItems.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link key={item.href} href={item.href}
+              className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
+              style={{ color: active ? "#E4002B" : "#6B6D72" }}>
+              <item.icon className="w-5 h-5" style={{ color: active ? "#E4002B" : "#6B6D72" }} />
+              <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

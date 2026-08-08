@@ -78,8 +78,18 @@ export async function getOrCreateSeanceDuJour(): Promise<{
     };
   }
 
-  const semainesTotales = prog.longueur_bloc * 4;
-  const jourDuProgramme = ((prog.semaine_courante - 1) * prog.jours_par_semaine + 1);
+  const { data: lastSeance } = await supabase
+    .from("seances")
+    .select("jour_du_programme")
+    .eq("user_id", user.id)
+    .eq("terminee", true)
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const jourDuProgramme = lastSeance
+    ? (lastSeance.jour_du_programme % prog.jours_par_semaine) + 1
+    : 1;
 
   const { data: newSeance, error } = await supabase
     .from("seances")

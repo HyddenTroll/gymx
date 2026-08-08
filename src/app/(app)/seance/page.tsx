@@ -8,6 +8,7 @@ import { calculerEchauffement, getCoeffExercice } from "@/lib/dashboard/dashboar
 import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamification/gamification-service";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
+import { incrementerSemaine } from "@/lib/programme/cycles";
 import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
 import type { Cran, Exercice } from "@/types";
 import Link from "next/link";
@@ -158,6 +159,8 @@ export default function SeancePage() {
 
     await initialiserGamification(user.id);
     if (xpGagne > 0) await ajouterXP(user.id, xpGagne, "séance terminée");
+
+    await incrementerSemaine(user.id);
 
     const { data: g } = await supabase.from("gamification").select("*").eq("user_id", user.id).single();
     if (g) {

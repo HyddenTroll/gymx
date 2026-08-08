@@ -9,6 +9,7 @@ import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamif
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
+import { SkeletonCard } from "@/components/skeleton";
 import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
 import type { Cran, Exercice } from "@/types";
 import Link from "next/link";
@@ -264,7 +265,7 @@ export default function SeancePage() {
     setTimeout(() => router.push("/qg"), 1200);
   };
 
-  if (loading) return (<div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh" }}><p className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Chargement…</p></div>);
+  if (loading) return (<div className="min-h-dvh flex flex-col p-4 space-y-3" style={{ minHeight: "100dvh" }}><SkeletonCard /><SkeletonCard /><SkeletonCard lines={2} /></div>);
   if (noProfil || noProgramme) return (
     <div className="min-h-dvh flex flex-col items-center justify-center p-6" style={{ minHeight: "100dvh" }}>
       <div className="card w-full max-w-sm p-6 text-center space-y-3">

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getVideoUrl } from "@/lib/exercices/videos";
-import { Search, BarChart3, Dumbbell, Library, TrendingUp, User, X } from "lucide-react";
+import { Search, BarChart3, Dumbbell, Library, TrendingUp, User, X, TrendingUp as TrendIcon } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
 
 const groupes = ["Pectoraux", "Epaules", "Dos", "Quadriceps", "Ischios/Fessiers", "Biceps", "Triceps", "Mollets", "Abdos"];
@@ -225,6 +226,31 @@ export default function BibliothequePage() {
                 )}
 
                 <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{exoStats.nbSeances} seances · {exoStats.series.length} series</p>
+
+                {exoStats.series.length > 5 && (() => {
+                  const points: Record<string, { date: string; charge: number }> = {};
+                  for (const s of exoStats.series) {
+                    const d = s.seance?.date?.split("T")[0];
+                    if (!d) continue;
+                    if (!points[d] || s.charge > points[d].charge) points[d] = { date: d, charge: s.charge };
+                  }
+                  const data = Object.values(points).sort((a, b) => a.date.localeCompare(b.date));
+                  return data.length > 1 && (
+                    <div className="pt-2">
+                      <p className="label text-[10px] mb-2 flex items-center gap-1"><TrendIcon className="w-3 h-3" />Progression charge</p>
+                      <div style={{ height: 120 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={data}>
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "var(--color-gymx-muted)" }} tickFormatter={(v: any) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} />
+                            <YAxis tick={{ fontSize: 9, fill: "var(--color-gymx-muted)" }} width={30} />
+                            <Tooltip contentStyle={{ fontSize: "11px", backgroundColor: "var(--color-gymx-surface)", border: "1px solid var(--color-gymx-border)", borderRadius: "8px" }} labelFormatter={(v: any) => new Date(v).toLocaleDateString("fr-FR")} />
+                            <Line type="monotone" dataKey="charge" stroke="var(--color-gymx-accent)" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {exoStats.efforts.length > 0 && (
                   <div className="space-y-1">

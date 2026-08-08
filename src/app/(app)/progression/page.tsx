@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getPoidsCorps, getForceMax } from "@/lib/dashboard/dashboard-service";
-import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { SkeletonCard } from "@/components/skeleton";
+import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar, Download } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
@@ -104,6 +105,27 @@ export default function ProgressionPage() {
     setTimeout(() => setMessage(""), 2000);
   };
 
+  const exportCSV = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("seances").select("date, jour_du_programme, series(reps, charge, unite), effort(valeur, cran)")
+      .eq("user_id", user.id).eq("terminee", true).order("date", { ascending: false });
+    if (!data) return;
+    let csv = "Date,Jour,Exercice_ID,Reps,Charge,Unite,RPE,Cran\n";
+    for (const s of data) {
+      for (const serie of (s as any).series || []) {
+        const effort = ((s as any).effort || []).find((e: any) => e.exercice_id === serie.exercice_id);
+        csv += `${s.date},${(s as any).jour_du_programme},${serie.exercice_id},${serie.reps},${serie.charge},${serie.unite || "kg"},${effort?.valeur || ""},${effort?.cran || ""}\n`;
+      }
+    }
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `gymx-export-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    setMessage("Export CSV téléchargé");
+    setTimeout(() => setMessage(""), 2000);
+  };
+
   const deleteSeance = async (id: string) => {
     if (!confirm("Supprimer cette séance ?")) return;
     await supabase.from("effort").delete().eq("seance_id", id);
@@ -123,9 +145,15 @@ export default function ProgressionPage() {
   return (
     <div className="min-h-dvh flex flex-col" style={{ minHeight: "100dvh" }}>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4 safe-area-top">
-        <header className="pt-1">
-          <h1 className="card-title">Progression</h1>
-          <p className="label">Poids du corps, records et séances passées</p>
+        <header className="pt-1 flex items-start justify-between">
+          <div>
+            <h1 className="card-title">Progression</h1>
+            <p className="label">Poids du corps, records et séances passées</p>
+          </div>
+          <button onClick={exportCSV} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold touch-target shrink-0"
+            style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+            <Download className="w-3 h-3" /> Export
+          </button>
         </header>
 
         {message && (

@@ -7,6 +7,7 @@ import { calculerProjections, type Projection } from "@/lib/dashboard/projection
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
 import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSousRegion } from "@/lib/dashboard/analytics";
 import { createClient } from "@/lib/supabase/client";
+import { SkeletonCard, SkeletonChart } from "@/components/skeleton";
 import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";

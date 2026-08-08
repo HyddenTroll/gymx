@@ -153,34 +153,39 @@ export default function SeancePage() {
   const formaterTemps = (s: number): string => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleSwap = async (exoIdx: number) => {
-    const exo = exercices[exoIdx];
-    if (!seanceId || !exo.structure_id) return;
-    const nextId = await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, true);
-    if (!nextId) return;
-    const { data: nextExo } = await supabase.from("exercices").select("*").eq("id", nextId).single();
-    if (!nextExo) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    let chargeCible = 0;
-    if (user) {
-      const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", user.id).eq("exercice_id", nextId).maybeSingle();
-      chargeCible = charge?.charge_actuelle ?? 0;
-      if (!charge) {
-        await supabase.from("charges").insert({ user_id: user.id, exercice_id: nextId, charge_actuelle: 0, unite: nextExo.unite_par_defaut, pas: nextExo.pas_par_defaut, sens: nextExo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 });
+    try {
+      const exo = exercices[exoIdx];
+      if (!seanceId || !exo.structure_id) return;
+      const nextId = await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, true);
+      if (!nextId) { setMessage("Aucun remplacement disponible"); setTimeout(() => setMessage(""), 2000); return; }
+      const { data: nextExo } = await supabase.from("exercices").select("*").eq("id", nextId).single();
+      if (!nextExo) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      let chargeCible = 0;
+      if (user) {
+        const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", user.id).eq("exercice_id", nextId).maybeSingle();
+        chargeCible = charge?.charge_actuelle ?? 0;
+        if (!charge) {
+          await supabase.from("charges").insert({ user_id: user.id, exercice_id: nextId, charge_actuelle: 0, unite: nextExo.unite_par_defaut, pas: nextExo.pas_par_defaut, sens: nextExo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 });
+        }
       }
+      setExercices((prev) => {
+        const n = [...prev];
+        n[exoIdx] = {
+          ...n[exoIdx],
+          exercice: nextExo,
+          charge_cible: chargeCible,
+          series: Array.from({ length: n[exoIdx].series_cibles }, (_, i) => ({ exercice_id: nextId, reps: n[exoIdx].reps_cibles, charge: chargeCible, validee: false, ordre: i })),
+          slider: null, slider_submitted: false, unite_actuelle: nextExo.unite_par_defaut || "kg",
+        };
+        return n;
+      });
+      setMessage(`↻ ${nextExo.nom_fr}`);
+      setTimeout(() => setMessage(""), 2000);
+    } catch {
+      setMessage("Erreur lors du remplacement");
+      setTimeout(() => setMessage(""), 2000);
     }
-    setExercices((prev) => {
-      const n = [...prev];
-      n[exoIdx] = {
-        ...n[exoIdx],
-        exercice: nextExo,
-        charge_cible: chargeCible,
-        series: Array.from({ length: n[exoIdx].series_cibles }, (_, i) => ({ exercice_id: nextId, reps: n[exoIdx].reps_cibles, charge: chargeCible, validee: false, ordre: i })),
-        slider: null, slider_submitted: false, unite_actuelle: nextExo.unite_par_defaut || "kg",
-      };
-      return n;
-    });
-    setMessage(`↻ ${nextExo.nom_fr}`);
-    setTimeout(() => setMessage(""), 2000);
   };
 
   const submitSlider = async (exoIdx: number, cran: Cran, rpeValue?: number) => {

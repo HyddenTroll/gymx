@@ -17,26 +17,40 @@ export async function faireRotation(
 
   const supabase = createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: exclus } = await supabase
+    .from("exercices_exclus")
+    .select("exercice_id")
+    .eq("user_id", user.id);
+  const exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
+
   const { data: pool } = await supabase
     .from("pools_substitution")
     .select("exercice_id")
     .eq("sous_region", sousRegion)
     .order("ordre");
 
-  if (!pool || pool.length <= 1) return null;
+  let ids = pool ? pool.map((p: any) => p.exercice_id) : [];
+  let autres = ids.filter((id: string) => id !== exerciceActuelId && !exclusSet.has(id));
 
-  const { data: { user } } = await supabase.auth.getUser();
-  let exclusSet = new Set<string>();
-  if (user) {
-    const { data: exclus } = await supabase
-      .from("exercices_exclus")
-      .select("exercice_id")
-      .eq("user_id", user.id);
-    exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
+  if (autres.length === 0) {
+    const { data: profil } = await supabase
+      .from("profil")
+      .select("materiel")
+      .eq("user_id", user.id)
+      .single();
+
+    const { data: fallback } = await supabase
+      .from("exercices")
+      .select("id")
+      .eq("sous_region", sousRegion)
+      .eq("equipement", profil?.materiel || "salle");
+
+    ids = fallback ? fallback.map((f: any) => f.id) : [];
+    autres = ids.filter((id: string) => id !== exerciceActuelId && !exclusSet.has(id));
   }
-
-  const ids = pool.map((p: any) => p.exercice_id);
-  const autres = ids.filter((id: string) => id !== exerciceActuelId && !exclusSet.has(id));
 
   if (autres.length === 0) return null;
 

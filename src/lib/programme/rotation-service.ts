@@ -25,8 +25,18 @@ export async function faireRotation(
 
   if (!pool || pool.length <= 1) return null;
 
+  const { data: { user } } = await supabase.auth.getUser();
+  let exclusSet = new Set<string>();
+  if (user) {
+    const { data: exclus } = await supabase
+      .from("exercices_exclus")
+      .select("exercice_id")
+      .eq("user_id", user.id);
+    exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
+  }
+
   const ids = pool.map((p: any) => p.exercice_id);
-  const autres = ids.filter((id: string) => id !== exerciceActuelId);
+  const autres = ids.filter((id: string) => id !== exerciceActuelId && !exclusSet.has(id));
 
   if (autres.length === 0) return null;
 

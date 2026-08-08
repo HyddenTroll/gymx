@@ -6,13 +6,14 @@ import { calculerProjections, type Projection } from "@/lib/dashboard/projection
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
 import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSousRegion } from "@/lib/dashboard/analytics";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw, Calendar } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
 
 const navItems = [
   { href: "/qg", label: "QG", icon: BarChart3 },
   { href: "/seance", label: "Séance", icon: Dumbbell },
+  { href: "/calendrier", label: "Cal.", icon: Calendar },
   { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
   { href: "/progression", label: "Progression", icon: TrendingUp },
   { href: "/profil", label: "Profil", icon: User },

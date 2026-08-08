@@ -9,6 +9,7 @@ import Link from "next/link";
 const navItems = [
   { href: "/qg", label: "QG", icon: BarChart3 },
   { href: "/seance", label: "Séance", icon: Dumbbell },
+  { href: "/calendrier", label: "Cal.", icon: Calendar },
   { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
   { href: "/progression", label: "Progression", icon: TrendingUp },
   { href: "/profil", label: "Profil", icon: User },

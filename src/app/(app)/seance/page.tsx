@@ -9,7 +9,7 @@ import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamif
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
-import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
+import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User, RefreshCw, Calendar } from "lucide-react";
 import type { Cran, Exercice } from "@/types";
 import Link from "next/link";
 
@@ -46,6 +46,7 @@ const resteRepos = (role: string, rpe?: number, objectif?: string): number => {
 
 const navItems = [
   { href: "/qg", label: "QG", icon: BarChart3 }, { href: "/seance", label: "Séance", icon: Dumbbell },
+  { href: "/calendrier", label: "Cal.", icon: Calendar },
   { href: "/bibliotheque", label: "Bibliothèque", icon: Library }, { href: "/progression", label: "Progression", icon: TrendingUp },
   { href: "/profil", label: "Profil", icon: User },
 ];

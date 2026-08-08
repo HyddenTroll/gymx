@@ -48,9 +48,13 @@ export default function CalendrierWidget() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [act, dates] = await Promise.all([getActivitesMois(annee, mois), getSeancesMois(annee, mois)]);
-      setActivites(act);
-      setSeanceDates(dates);
+      try {
+        const [act, dates] = await Promise.all([getActivitesMois(annee, mois), getSeancesMois(annee, mois)]);
+        setActivites(act);
+        setSeanceDates(dates);
+      } catch {
+        setMessage("Impossible de charger le calendrier");
+      }
       setLoading(false);
     })();
   }, [annee, mois]);

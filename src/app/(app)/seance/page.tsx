@@ -56,6 +56,7 @@ export default function SeancePage() {
   const [seanceId, setSeanceId] = useState<string | null>(null);
   const [exercices, setExercices] = useState<ExerciceEnCours[]>([]);
   const [chrono, setChrono] = useState<number | null>(null); const [chronoRunning, setChronoRunning] = useState(false); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
+  const [saved, setSaved] = useState(false);
   const pathname = "/seance";
 
   const chargerSeance = useCallback(async () => {
@@ -68,66 +69,60 @@ export default function SeancePage() {
       const { data: exclus } = await supabase.from("exercices_exclus").select("exercice_id").eq("user_id", currentUser.id);
       exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
     }
-    if (result.nouvelle || result.exercices.length === 0) {
-      const { data: prog } = await supabase.from("programme_actif").select("*").single();
-      if (!prog) { setNoProgramme(true); setLoading(false); return; }
-      const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
-        .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
-      if (!structures || structures.length === 0) { setNoProgramme(true); setLoading(false); return; }
-      const exosAvecCharges: ExerciceEnCours[] = [];
-      for (const s of structures) {
-        let { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
-        if (exo && exclusSet.has(exo.id)) {
-          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true, exo.groupe);
-          if (newId) {
-            const { data: newExo } = await supabase.from("exercices").select("*").eq("id", newId).single();
-            if (newExo) exo = newExo;
-          }
-        }
-        let chargeCible = 0;
-        if (exo) {
-          const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", prog.user_id).eq("exercice_id", exo.id).maybeSingle();
-          chargeCible = charge?.charge_actuelle ?? 0;
-          if (!charge) { await supabase.from("charges").insert({ user_id: prog.user_id, exercice_id: exo.id, charge_actuelle: 0, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 }); }
-        }
-        const series = Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exo?.id || s.exercice_id, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
-        exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: null, slider_submitted: false, unite_actuelle: exo?.unite_par_defaut || "kg" });
-      }
-      setExercices(exosAvecCharges);
-    } else {
-      const seriesParExo = new Map<string, SerieLog[]>();
+
+    const { data: prog } = await supabase.from("programme_actif").select("*").single();
+    if (!prog) { setNoProgramme(true); setLoading(false); return; }
+    const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
+      .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
+    if (!structures || structures.length === 0) { setNoProgramme(true); setLoading(false); return; }
+
+    const allIds = structures.map((s: any) => s.exercice_id);
+    const [{ data: allExercises }, { data: allCharges }] = await Promise.all([
+      supabase.from("exercices").select("*").in("id", allIds),
+      supabase.from("charges").select("*").in("exercice_id", allIds).eq("user_id", prog.user_id),
+    ]);
+    const exoMap = new Map((allExercises || []).map((e: any) => [e.id, e]));
+    const chargeMap = new Map((allCharges || []).map((c: any) => [c.exercice_id, c]));
+
+    let seriesParExo = new Map<string, SerieLog[]>();
+    if (!result.nouvelle && result.exercices.length > 0) {
       for (const serie of result.exercices) {
         const key = serie.exercice_id;
         if (!seriesParExo.has(key)) seriesParExo.set(key, []);
         seriesParExo.get(key)!.push({ id: serie.id, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, validee: serie.validee, ordre: serie.ordre });
       }
-      const { data: prog } = await supabase.from("programme_actif").select("*").single();
-      if (!prog) { setNoProgramme(true); setLoading(false); return; }
-      const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
-        .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
-      const exosAvecCharges: ExerciceEnCours[] = [];
-      for (const s of structures || []) {
-        let { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
-        if (exo && exclusSet.has(exo.id)) {
-          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true, exo.groupe);
-          if (newId) {
+    }
+
+    const efforts = result.efforts || [];
+    const exosAvecCharges: ExerciceEnCours[] = [];
+    const chargesToInsert: any[] = [];
+
+    for (const s of structures) {
+      let exo: any = exoMap.get(s.exercice_id) || null;
+      if (exo && exclusSet.has(exo.id)) {
+        const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true, exo.groupe);
+        if (newId) {
+          exo = exoMap.get(newId);
+          if (!exo) {
             const { data: newExo } = await supabase.from("exercices").select("*").eq("id", newId).single();
-            if (newExo) exo = newExo;
+            if (newExo) { exo = newExo; exoMap.set(newId, newExo); }
           }
         }
-        let chargeCible = 0;
-        if (exo) {
-          const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", prog.user_id).eq("exercice_id", exo.id).maybeSingle();
-          chargeCible = charge?.charge_actuelle ?? 0;
-          if (!charge) { await supabase.from("charges").insert({ user_id: prog.user_id, exercice_id: exo.id, charge_actuelle: 0, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 }); }
-        }
-        const series = seriesParExo.get(exo?.id || s.exercice_id) || Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exo?.id || s.exercice_id, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
-        const efforts = result.efforts || [];
-        const effortExo = efforts.find((e: any) => e.exercice_id === (exo?.id || s.exercice_id));
-        exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg" });
       }
-      setExercices(exosAvecCharges);
+      let chargeCible = 0;
+      if (exo) {
+        const charge: any = chargeMap.get(exo.id);
+        chargeCible = charge?.charge_actuelle ?? 0;
+        if (!charge) chargesToInsert.push({ user_id: prog.user_id, exercice_id: exo.id, charge_actuelle: 0, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 });
+      }
+      const exoId = exo?.id || s.exercice_id;
+      const series = seriesParExo.get(exoId) || Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exoId, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
+      const effortExo = efforts.find((e: any) => e.exercice_id === exoId);
+      exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg" });
     }
+
+    for (const charge of chargesToInsert) await supabase.from("charges").insert(charge);
+    setExercices(exosAvecCharges);
     setLoading(false);
   }, [router, supabase]);
 
@@ -158,6 +153,7 @@ export default function SeancePage() {
       validee: serie.validee,
       ordre: serie.ordre,
     });
+    setSaved(true); setTimeout(() => setSaved(false), 1500);
   };
 
   const toggleSerie = async (exoIdx: number, serieIdx: number) => {
@@ -287,6 +283,7 @@ export default function SeancePage() {
           <div>
             <h1 className="card-title">Séance du jour</h1>
             <p className="label text-[10px]">{exercices.filter((e) => e.series.every((s) => s.validee)).length}/{exercices.length} exercices</p>
+            <p className="text-[9px] transition-opacity duration-300" style={{ color: "var(--color-gymx-accent)", opacity: saved ? 1 : 0 }}>✓ Sauvegardé</p>
           </div>
           <button onClick={sauverSeance} disabled={!toutValide || saving} className="touch-target"
             style={{ backgroundColor: toutValide && !saving ? "var(--color-gymx-accent)" : "var(--color-gymx-fill)", color: toutValide && !saving ? "#0a0a0b" : "var(--color-gymx-muted)", fontWeight: 600, fontSize: "14px", padding: "10px 16px", borderRadius: "12px", border: "none" }}>

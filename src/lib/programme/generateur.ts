@@ -60,7 +60,7 @@ export async function genererProgramme(params: GenererParams): Promise<boolean> 
   if (!tousLesExos) return false;
 
   const exclusSet = new Set(params.exclus);
-  const disponibles = tousLesExos.filter((e: any) => !exclusSet.has(e.id) && e.equipement === params.materiel || e.equipement === "corps");
+  const disponibles = tousLesExos.filter((e: any) => !exclusSet.has(e.id) && (e.equipement === params.materiel || e.equipement === "corps"));
 
   const volumeParSemaine = params.objectif === "force" ? 12 : params.objectif === "muscle" ? 16 : 14;
   const setsParJour = Math.round(volumeParSemaine / params.jours);

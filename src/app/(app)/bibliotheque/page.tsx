@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getVideoUrl } from "@/lib/exercices/videos";
-import { Search, BarChart3, Dumbbell, Library, TrendingUp, User, X, Calendar } from "lucide-react";
+import { Search, BarChart3, Dumbbell, Library, TrendingUp, User, X } from "lucide-react";
 import Link from "next/link";
 
 const groupes = ["Pectoraux", "Epaules", "Dos", "Quadriceps", "Ischios/Fessiers", "Biceps", "Triceps", "Mollets", "Abdos"];
 const equipements = ["salle", "halteres", "corps"] as const;
 const navItems = [
   { href: "/qg", label: "QG", icon: BarChart3 }, { href: "/seance", label: "Seance", icon: Dumbbell },
-  { href: "/calendrier", label: "Cal.", icon: Calendar },
   { href: "/bibliotheque", label: "Bibliotheque", icon: Library }, { href: "/progression", label: "Progression", icon: TrendingUp },
   { href: "/profil", label: "Profil", icon: User },
 ];

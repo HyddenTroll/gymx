@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
+import CalendrierWidget from "@/components/calendrier-widget";
 import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
 import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSousRegion } from "@/lib/dashboard/analytics";
 import { createClient } from "@/lib/supabase/client";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw, Calendar } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
 
 const navItems = [
   { href: "/qg", label: "QG", icon: BarChart3 },
   { href: "/seance", label: "Séance", icon: Dumbbell },
-  { href: "/calendrier", label: "Cal.", icon: Calendar },
   { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
   { href: "/progression", label: "Progression", icon: TrendingUp },
   { href: "/profil", label: "Profil", icon: User },
@@ -524,6 +524,8 @@ export default function QGPage() {
           </div>
         </div>
       )}
+
+      <CalendrierWidget />
 
       <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {

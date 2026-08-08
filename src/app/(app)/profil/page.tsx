@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mettreAJourProfil, ajouterPoids, reintegrerExercice } from "@/lib/dashboard/projections";
 import { getPoidsCorps } from "@/lib/dashboard/dashboard-service";
-import { ArrowLeft, Weight, X, Dumbbell } from "lucide-react";
+import { ArrowLeft, Weight, X, Dumbbell, Bell, BellOff } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilPage() {
@@ -20,6 +20,7 @@ export default function ProfilPage() {
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [notifStatus, setNotifStatus] = useState<"unsupported" | "off" | "on" | "loading">("loading");
 
   const niveaux = ["debutant", "intermediaire", "avance"];
   const joursOpts = [3, 4, 5, 6];
@@ -49,6 +50,11 @@ export default function ProfilPage() {
         .maybeSingle();
       if (prog) setProgramme(prog);
     })();
+    (async () => {
+      const { isSubscribed } = await import("@/lib/notifications/notifications-service");
+      const subbed = await isSubscribed();
+      setNotifStatus(subbed ? "on" : "off");
+    })();
   }, [router, supabase]);
 
   const handleSaveProfil = async () => {
@@ -73,6 +79,22 @@ export default function ProfilPage() {
       const pc = await getPoidsCorps();
       setPoids(pc);
       setMessage("Poids enregistré");
+      setTimeout(() => setMessage(""), 2000);
+    }
+  };
+
+  const toggleNotifs = async () => {
+    setNotifStatus("loading");
+    if (notifStatus === "on") {
+      const { disableNotifications } = await import("@/lib/notifications/notifications-service");
+      await disableNotifications();
+      setNotifStatus("off");
+    } else {
+      const { enableNotifications } = await import("@/lib/notifications/notifications-service");
+      const res = await enableNotifications();
+      if (res === "unsupported") { setNotifStatus("unsupported"); setMessage("Notifications non supportées sur ce navigateur"); }
+      else if (res === "ok") setNotifStatus("on");
+      else setNotifStatus("off");
       setTimeout(() => setMessage(""), 2000);
     }
   };
@@ -225,6 +247,22 @@ export default function ProfilPage() {
               </div>
             ))
           )}
+        </div>
+
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Bell className="w-4 h-4" style={{ color: "var(--color-gymx-muted)" }} />
+            <p className="label">Notifications</p>
+          </div>
+          <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
+            Reçois une alerte les jours de séance et quand tu bats un record.
+          </p>
+          <button onClick={toggleNotifs} disabled={notifStatus === "loading"}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold touch-target disabled:opacity-40"
+            style={{ backgroundColor: notifStatus === "on" ? "var(--color-gymx-accent)" : "var(--color-gymx-fill)", color: notifStatus === "on" ? "#0a0a0b" : "var(--color-gymx-muted)" }}>
+            {notifStatus === "loading" ? "…" : notifStatus === "on" ? <><BellOff className="w-4 h-4" /> Désactiver</> : <><Bell className="w-4 h-4" /> Activer</>}
+          </button>
+          {notifStatus === "unsupported" && <p className="text-[10px] text-center" style={{ color: "var(--color-gymx-muted)" }}>Non supporté. Ajoute l'app à l'écran d'accueil iOS 16.4+.</p>}
         </div>
 
         <div className="card p-4 space-y-2">

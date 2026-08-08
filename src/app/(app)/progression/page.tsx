@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getPoidsCorps, getForceMax } from "@/lib/dashboard/dashboard-service";
-import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
@@ -23,6 +23,9 @@ export default function ProgressionPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editSeries, setEditSeries] = useState<any[]>([]);
+  const [editEfforts, setEditEfforts] = useState<any[]>([]);
+  const [editDate, setEditDate] = useState("");
+  const [exoNomMap, setExoNomMap] = useState<Map<string, string>>(new Map());
   const [message, setMessage] = useState("");
   const pathname = "/progression";
 
@@ -33,6 +36,10 @@ export default function ProgressionPage() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
+
+      const { data: allExercises } = await supabase.from("exercices").select("id, nom_fr");
+      const nomMap = new Map<string, string>((allExercises || []).map((e: any) => [e.id, e.nom_fr]));
+      setExoNomMap(nomMap);
 
       const { data } = await supabase
         .from("seances")
@@ -54,7 +61,19 @@ export default function ProgressionPage() {
 
   const startEdit = (seance: any) => {
     setEditingId(seance.id);
-    setEditSeries(JSON.parse(JSON.stringify(seance.series)));
+    setEditSeries(JSON.parse(JSON.stringify(seance.series || [])));
+    setEditEfforts(JSON.parse(JSON.stringify(seance.effort || [])));
+    setEditDate(seance.date?.split("T")[0] || "");
+  };
+
+  const updateEditEffort = (exerciceId: string, field: string, value: any) => {
+    setEditEfforts((prev) => {
+      const n = [...prev];
+      const idx = n.findIndex((e: any) => e.exercice_id === exerciceId);
+      if (idx >= 0) n[idx] = { ...n[idx], [field]: value };
+      else n.push({ exercice_id: exerciceId, [field]: value });
+      return n;
+    });
   };
 
   const updateEditSerie = (idx: number, field: string, value: number) => {
@@ -68,10 +87,16 @@ export default function ProgressionPage() {
   const saveEdit = async () => {
     if (!editingId) return;
     for (const serie of editSeries) {
-      await supabase.from("series").update({ reps: serie.reps, charge: serie.charge }).eq("id", serie.id);
+      if (serie.id) await supabase.from("series").update({ reps: serie.reps, charge: serie.charge }).eq("id", serie.id);
+    }
+    for (const effort of editEfforts) {
+      if (effort.id) await supabase.from("effort").update({ valeur: effort.valeur, cran: effort.cran }).eq("id", effort.id);
+    }
+    if (editDate) {
+      await supabase.from("seances").update({ date: editDate }).eq("id", editingId);
     }
     setSeances((prev) => prev.map((s) => {
-      if (s.id === editingId) return { ...s, series: editSeries };
+      if (s.id === editingId) return { ...s, series: editSeries, effort: editEfforts, date: editDate };
       return s;
     }));
     setEditingId(null);
@@ -216,25 +241,88 @@ export default function ProgressionPage() {
                     </div>
 
                     {isExpanded && (
-                      <div className="border-t px-3 py-2 space-y-2" style={{ borderColor: "var(--color-gymx-border)" }}>
-                        {isEditing ? (
-                          <>
-                            {editSeries.map((serie: any, idx: number) => (
-                              <div key={serie.id || idx} className="flex items-center gap-2 text-xs py-1">
-                                <span className="font-mono w-5 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{idx + 1}</span>
-                                <input type="number" value={serie.reps}
-                                  onChange={(e) => updateEditSerie(idx, "reps", Number(e.target.value) || 0)}
-                                  className="w-14 border rounded-lg px-2 py-1 text-center"
-                                  style={{ fontSize: "14px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
-                                <span style={{ color: "var(--color-gymx-muted)" }}>×</span>
-                                <input type="number" value={serie.charge}
-                                  onChange={(e) => updateEditSerie(idx, "charge", Number(e.target.value) || 0)}
-                                  className="w-16 border rounded-lg px-2 py-1 text-center"
-                                  style={{ fontSize: "14px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
-                                <span style={{ color: "var(--color-gymx-muted)" }}>{serie.unite || "kg"}</span>
+                      <div className="border-t px-3 py-2 space-y-3" style={{ borderColor: "var(--color-gymx-border)" }}>
+                        {isEditing && (
+                          <div className="flex items-center gap-2 pb-1 border-b" style={{ borderColor: "var(--color-gymx-border)" }}>
+                            <Calendar className="w-3 h-3" style={{ color: "var(--color-gymx-muted)" }} />
+                            <input type="date" value={editDate}
+                              onChange={(e) => setEditDate(e.target.value)}
+                              className="text-xs font-medium bg-transparent border-none outline-none"
+                              style={{ color: "var(--color-gymx-text)" }} />
+                          </div>
+                        )}
+                        {(() => {
+                          const series = isEditing ? editSeries : (s.series || []);
+                          const efforts = isEditing ? editEfforts : (s.effort || []);
+                          const groupes = new Map<string, any[]>();
+                          for (const serie of series) {
+                            const key = serie.exercice_id;
+                            if (!groupes.has(key)) groupes.set(key, []);
+                            groupes.get(key)!.push(serie);
+                          }
+                          const rows: any[] = [];
+                          let globalIdx = 0;
+                          for (const [exoId, exoSeries] of groupes) {
+                            const nom = exoNomMap.get(exoId) || "Exercice";
+                            const effort = efforts.find((e: any) => e.exercice_id === exoId);
+                            rows.push({ type: "header", exoId, nom, effort, count: exoSeries.length });
+                            for (const serie of exoSeries) {
+                              rows.push({ type: "serie", serie, globalIdx, exoId });
+                              globalIdx++;
+                            }
+                          }
+                          return rows.map((row, ri) => {
+                            if (row.type === "header") {
+                              return (
+                                <div key={`h-${row.exoId}`} className="flex items-center justify-between pt-1 first:pt-0">
+                                  <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-text)" }}>{row.nom}</span>
+                                  {isEditing ? (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>RPE</span>
+                                      <input type="number" min={1} max={10} value={row.effort?.valeur || ""}
+                                        onChange={(e) => updateEditEffort(row.exoId, "valeur", Number(e.target.value) || 0)}
+                                        className="w-10 border rounded-lg px-1 py-0.5 text-center text-xs"
+                                        style={{ fontSize: "12px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
+                                    </div>
+                                  ) : (
+                                    row.effort && <span className="text-[10px] font-semibold" style={{ color: "var(--color-gymx-accent)" }}>RPE {row.effort.valeur}</span>
+                                  )}
+                                </div>
+                              );
+                            }
+                            const serie = row.serie;
+                            const idx = row.globalIdx;
+                            if (isEditing) {
+                              return (
+                                <div key={`s-${idx}`} className="flex items-center gap-2 text-xs py-1 pl-2">
+                                  <span className="font-mono w-4 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{(series.filter((s2: any) => s2.exercice_id === row.exoId).indexOf(serie)) + 1}</span>
+                                  <input type="number" value={serie.reps}
+                                    onChange={(e) => updateEditSerie(idx, "reps", Number(e.target.value) || 0)}
+                                    className="w-12 border rounded-lg px-2 py-1 text-center"
+                                    style={{ fontSize: "14px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
+                                  <span style={{ color: "var(--color-gymx-muted)" }}>×</span>
+                                  <input type="number" value={serie.charge}
+                                    onChange={(e) => updateEditSerie(idx, "charge", Number(e.target.value) || 0)}
+                                    className="w-14 border rounded-lg px-2 py-1 text-center"
+                                    style={{ fontSize: "14px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-bg)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
+                                  <span style={{ color: "var(--color-gymx-muted)" }}>{serie.unite || "kg"}</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div key={`s-${idx}`} className="flex items-center gap-2 text-xs py-0.5 pl-2">
+                                <span className="font-mono w-4 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{(s.series.filter((s2: any) => s2.exercice_id === row.exoId).indexOf(serie)) + 1}</span>
+                                <span className="font-mono font-medium" style={{ fontFamily: "var(--font-mono)", color: "var(--color-gymx-text)" }}>
+                                  {serie.charge || 0}
+                                </span>
+                                <span style={{ color: "var(--color-gymx-muted)" }}>{serie.unite || "kg"} × {serie.reps}</span>
                               </div>
-                            ))}
-                            <div className="flex gap-2 pt-1">
+                            );
+                          });
+                        })()}
+                        <div className="flex gap-2 pt-1">
+                          {isEditing ? (
+                            <>
                               <button onClick={() => setEditingId(null)}
                                 className="flex-1 py-2 rounded-lg text-xs font-semibold touch-target"
                                 style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
@@ -245,22 +333,9 @@ export default function ProgressionPage() {
                                 style={{ backgroundColor: "var(--color-gymx-accent)", color: "#0a0a0b" }}>
                                 <Save className="w-3 h-3 inline mr-1" />Sauvegarder
                               </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="space-y-1">
-                              {(s.series || []).map((serie: any, idx: number) => (
-                                <div key={serie.id || idx} className="flex items-center gap-2 text-xs py-0.5">
-                                  <span className="font-mono w-5 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{idx + 1}</span>
-                                  <span className="font-mono font-medium" style={{ fontFamily: "var(--font-mono)", color: "var(--color-gymx-text)" }}>
-                                    {serie.charge || 0}
-                                  </span>
-                                  <span style={{ color: "var(--color-gymx-muted)" }}>{serie.unite || "kg"} × {serie.reps}</span>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex gap-2 pt-1">
+                            </>
+                          ) : (
+                            <>
                               <button onClick={() => deleteSeance(s.id)}
                                 className="flex items-center gap-1 py-2 px-3 rounded-lg text-xs font-semibold touch-target"
                                 style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
@@ -271,9 +346,9 @@ export default function ProgressionPage() {
                                 style={{ backgroundColor: "var(--color-gymx-fill)", color: "var(--color-gymx-text)" }}>
                                 Modifier
                               </button>
-                            </div>
-                          </>
-                        )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

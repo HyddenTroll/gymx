@@ -6,12 +6,15 @@ import type { Exercice } from "@/types";
  * du même pool de sous-région, en évitant le dernier utilisé.
  * Les exos "principal" restent fixes.
  */
+const FALLBACK_EQUIPEMENT = ["salle", "halteres", "corps"];
+
 export async function faireRotation(
   programmeStructureId: string,
   exerciceActuelId: string,
   sousRegion: string,
   fige: boolean,
-  force?: boolean
+  force?: boolean,
+  groupe?: string
 ): Promise<string | null> {
   if (fige && !force) return null;
 
@@ -42,14 +45,28 @@ export async function faireRotation(
       .eq("user_id", user.id)
       .single();
 
+    const equip = profil?.materiel || "salle";
+
     const { data: fallback } = await supabase
       .from("exercices")
       .select("id")
       .eq("sous_region", sousRegion)
-      .eq("equipement", profil?.materiel || "salle");
+      .eq("equipement", equip);
 
     ids = fallback ? fallback.map((f: any) => f.id) : [];
     autres = ids.filter((id: string) => id !== exerciceActuelId && !exclusSet.has(id));
+  }
+
+  if (autres.length === 0 && groupe) {
+    for (const equip of FALLBACK_EQUIPEMENT) {
+      const { data: fallbackGroupe } = await supabase
+        .from("exercices")
+        .select("id, equipement")
+        .eq("groupe", groupe);
+      ids = fallbackGroupe ? fallbackGroupe.filter((f: any) => f.equipement === equip).map((f: any) => f.id) : [];
+      autres = ids.filter((id: string) => id !== exerciceActuelId && !exclusSet.has(id));
+      if (autres.length > 0) break;
+    }
   }
 
   if (autres.length === 0) return null;

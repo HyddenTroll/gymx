@@ -78,7 +78,7 @@ export default function SeancePage() {
       for (const s of structures) {
         let { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
         if (exo && exclusSet.has(exo.id)) {
-          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true);
+          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true, exo.groupe);
           if (newId) {
             const { data: newExo } = await supabase.from("exercices").select("*").eq("id", newId).single();
             if (newExo) exo = newExo;
@@ -109,7 +109,7 @@ export default function SeancePage() {
       for (const s of structures || []) {
         let { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
         if (exo && exclusSet.has(exo.id)) {
-          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true);
+          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true, exo.groupe);
           if (newId) {
             const { data: newExo } = await supabase.from("exercices").select("*").eq("id", newId).single();
             if (newExo) exo = newExo;
@@ -178,7 +178,7 @@ export default function SeancePage() {
     try {
       const exo = exercices[exoIdx];
       if (!seanceId || !exo.structure_id) return;
-      const nextId = await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, true);
+      const nextId = await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, true, exo.exercice.groupe);
       if (!nextId) { setMessage("Aucun remplacement disponible"); setTimeout(() => setMessage(""), 2000); return; }
       const { data: nextExo } = await supabase.from("exercices").select("*").eq("id", nextId).single();
       if (!nextExo) return;
@@ -226,7 +226,7 @@ export default function SeancePage() {
 
     const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs }).eq("id", chargeData.id);
-    if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige); }
+    if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, false, exo.exercice.groupe); }
     if (resultat.plateau_detecte || resultat.deload_suggere) {
       setMessage(`⚠ ${resultat.deload_suggere ? "Semaine allégée recommandée" : "Plateau détecté"}`);
       setTimeout(() => setMessage(""), 4000);

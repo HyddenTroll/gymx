@@ -10,9 +10,10 @@ export async function faireRotation(
   programmeStructureId: string,
   exerciceActuelId: string,
   sousRegion: string,
-  fige: boolean
+  fige: boolean,
+  force?: boolean
 ): Promise<string | null> {
-  if (fige) return null;
+  if (fige && !force) return null;
 
   const supabase = createClient();
 

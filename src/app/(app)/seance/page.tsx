@@ -108,13 +108,67 @@ export default function SeancePage() {
     setExercices((prev) => { const n = [...prev]; n[exoIdx] = { ...n[exoIdx], series: n[exoIdx].series.map((s, i) => i === serieIdx ? { ...s, ...updates } : s) }; return n; });
   };
 
-  const toggleSerie = (exoIdx: number, serieIdx: number) => {
+  const sauverSerie = async (exoIdx: number, serieIdx: number) => {
+    if (!seanceId) return;
+    const exo = exercices[exoIdx];
+    const serie = exo.series[serieIdx];
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("series").upsert({
+      seance_id: seanceId,
+      exercice_id: serie.exercice_id,
+      reps: serie.reps,
+      charge: serie.charge,
+      unite: exo.unite_actuelle,
+      validee: serie.validee,
+      ordre: serie.ordre,
+    });
+  };
+
+  const toggleSerie = async (exoIdx: number, serieIdx: number) => {
     const serie = exercices[exoIdx].series[serieIdx];
-    if (serie.validee) { updateSerie(exoIdx, serieIdx, { validee: false }); }
-    else { updateSerie(exoIdx, serieIdx, { validee: true }); setChrono(resteRepos(exercices[exoIdx].role)); setChronoRunning(true); }
+    const nouvelleValeur = !serie.validee;
+    setExercices((prev) => {
+      const n = [...prev];
+      n[exoIdx] = { ...n[exoIdx], series: n[exoIdx].series.map((s, i) => i === serieIdx ? { ...s, validee: nouvelleValeur } : s) };
+      return n;
+    });
+    if (nouvelleValeur) { setChrono(resteRepos(exercices[exoIdx].role)); setChronoRunning(true); }
+    await sauverSerie(exoIdx, serieIdx);
   };
 
   const formaterTemps = (s: number): string => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+  const handleSwap = async (exoIdx: number) => {
+    const exo = exercices[exoIdx];
+    if (!seanceId || !exo.structure_id) return;
+    const nextId = await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, true);
+    if (!nextId) return;
+    const { data: nextExo } = await supabase.from("exercices").select("*").eq("id", nextId).single();
+    if (!nextExo) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    let chargeCible = 0;
+    if (user) {
+      const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", user.id).eq("exercice_id", nextId).maybeSingle();
+      chargeCible = charge?.charge_actuelle ?? 0;
+      if (!charge) {
+        await supabase.from("charges").insert({ user_id: user.id, exercice_id: nextId, charge_actuelle: 0, unite: nextExo.unite_par_defaut, pas: nextExo.pas_par_defaut, sens: nextExo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 });
+      }
+    }
+    setExercices((prev) => {
+      const n = [...prev];
+      n[exoIdx] = {
+        ...n[exoIdx],
+        exercice: nextExo,
+        charge_cible: chargeCible,
+        series: Array.from({ length: n[exoIdx].series_cibles }, (_, i) => ({ exercice_id: nextId, reps: n[exoIdx].reps_cibles, charge: chargeCible, validee: false, ordre: i })),
+        slider: null, slider_submitted: false, unite_actuelle: nextExo.unite_par_defaut || "kg",
+      };
+      return n;
+    });
+    setMessage(`↻ ${nextExo.nom_fr}`);
+    setTimeout(() => setMessage(""), 2000);
+  };
 
   const submitSlider = async (exoIdx: number, cran: Cran, rpeValue?: number) => {
     if (!seanceId) return;
@@ -215,9 +269,17 @@ export default function SeancePage() {
                 <h3 className="font-semibold text-[15px] text-gymx-text" style={{ fontFamily: "var(--font-body)" }}>{exo.exercice.nom_fr || "Exercice"}</h3>
                 <p className="label text-[10px]">{exo.role === "principal" ? "Principal" : "Accessoire"}</p>
               </div>
-              <span className="text-sm font-mono font-medium shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
-                {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
-              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                {exo.structure_id && !exo.series.every((s) => s.validee) && (
+                  <button onClick={() => handleSwap(exoIdx)} className="text-[10px] font-semibold px-1.5 py-1 rounded-lg transition-colors touch-target"
+                    style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+                    ↻
+                  </button>
+                )}
+                <span className="text-sm font-mono font-medium" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
+                  {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
+                </span>
+              </div>
             </div>
 
             {exo.unite_actuelle !== "reps" && exo.charge_cible > 0 && !exo.series[0]?.validee && (
@@ -235,12 +297,12 @@ export default function SeancePage() {
                 <div key={serieIdx} className="flex items-center gap-1.5 p-2 rounded-xl" style={{ backgroundColor: serie.validee ? "rgba(245,158,11,0.08)" : "var(--color-gymx-bg)" }}>
                   <span className="text-xs font-mono w-5 shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>S{serieIdx + 1}</span>
                   <div className="flex-1 flex items-center gap-1.5">
-                    <input type="number" value={serie.reps} onChange={(e) => updateSerie(exoIdx, serieIdx, { reps: Number(e.target.value) || 0 })} disabled={serie.validee} inputMode="numeric"
+                    <input type="number" value={serie.reps} onChange={(e) => updateSerie(exoIdx, serieIdx, { reps: Number(e.target.value) || 0 })} onBlur={() => sauverSerie(exoIdx, serieIdx)} disabled={serie.validee} inputMode="numeric"
                       className="w-14 border rounded-xl px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
                       style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
                     <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>réps</span>
                     {exo.unite_actuelle !== "reps" && (
-                      <input type="number" value={serie.charge} onChange={(e) => updateSerie(exoIdx, serieIdx, { charge: Number(e.target.value) || 0 })} disabled={serie.validee} inputMode="decimal"
+                      <input type="number" value={serie.charge} onChange={(e) => updateSerie(exoIdx, serieIdx, { charge: Number(e.target.value) || 0 })} onBlur={() => sauverSerie(exoIdx, serieIdx)} disabled={serie.validee} inputMode="decimal"
                         className="w-16 border rounded-xl px-2 py-1.5 text-center text-sm disabled:opacity-50 touch-target"
                         style={{ fontSize: "16px", borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)", color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }} />
                     )}

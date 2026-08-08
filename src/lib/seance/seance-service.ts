@@ -34,6 +34,7 @@ export async function checkOnboardingComplete(): Promise<{
 export async function getOrCreateSeanceDuJour(): Promise<{
   seance: any;
   exercices: any[];
+  efforts: any[];
   nouvelle: boolean;
 } | null> {
   const supabase = createClient();
@@ -74,6 +75,7 @@ export async function getOrCreateSeanceDuJour(): Promise<{
     return {
       seance: seanceExistante,
       exercices: series || [],
+      efforts: efforts || [],
       nouvelle: false,
     };
   }
@@ -106,6 +108,7 @@ export async function getOrCreateSeanceDuJour(): Promise<{
   return {
     seance: newSeance,
     exercices: [],
+    efforts: [],
     nouvelle: true,
   };
 }

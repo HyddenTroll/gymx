@@ -9,7 +9,7 @@ import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamif
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
-import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User } from "lucide-react";
+import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
 import type { Cran, Exercice } from "@/types";
 import Link from "next/link";
 
@@ -62,18 +62,18 @@ export default function SeancePage() {
     const result = await getOrCreateSeanceDuJour();
     if (!result) { const { data: { user } } = await supabase.auth.getUser(); if (!user) { router.push("/login"); return; } setNoProfil(true); setLoading(false); return; }
     setSeanceId(result.seance.id);
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    let exclusSet = new Set<string>();
+    if (currentUser) {
+      const { data: exclus } = await supabase.from("exercices_exclus").select("exercice_id").eq("user_id", currentUser.id);
+      exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
+    }
     if (result.nouvelle || result.exercices.length === 0) {
       const { data: prog } = await supabase.from("programme_actif").select("*").single();
       if (!prog) { setNoProgramme(true); setLoading(false); return; }
       const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
         .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
       if (!structures || structures.length === 0) { setNoProgramme(true); setLoading(false); return; }
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      let exclusSet = new Set<string>();
-      if (currentUser) {
-        const { data: exclus } = await supabase.from("exercices_exclus").select("exercice_id").eq("user_id", currentUser.id);
-        exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
-      }
       const exosAvecCharges: ExerciceEnCours[] = [];
       for (const s of structures) {
         let { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
@@ -95,16 +95,38 @@ export default function SeancePage() {
       }
       setExercices(exosAvecCharges);
     } else {
-      const grouped: Map<string, ExerciceEnCours> = new Map();
+      const seriesParExo = new Map<string, SerieLog[]>();
       for (const serie of result.exercices) {
         const key = serie.exercice_id;
-        if (!grouped.has(key)) {
-          const { data: exo } = await supabase.from("exercices").select("*").eq("id", key).single();
-          grouped.set(key, { exercice: exo || ({} as Exercice), structure_id: "", series_cibles: 0, reps_cibles: 0, charge_cible: 0, role: "accessoire", fige: false, series: [], slider: null, slider_submitted: false, unite_actuelle: "kg" });
-        }
-        grouped.get(key)!.series.push({ id: serie.id, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, validee: serie.validee, ordre: serie.ordre });
+        if (!seriesParExo.has(key)) seriesParExo.set(key, []);
+        seriesParExo.get(key)!.push({ id: serie.id, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, validee: serie.validee, ordre: serie.ordre });
       }
-      setExercices(Array.from(grouped.values()));
+      const { data: prog } = await supabase.from("programme_actif").select("*").single();
+      if (!prog) { setNoProgramme(true); setLoading(false); return; }
+      const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
+        .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
+      const exosAvecCharges: ExerciceEnCours[] = [];
+      for (const s of structures || []) {
+        let { data: exo } = await supabase.from("exercices").select("*").eq("id", s.exercice_id).single();
+        if (exo && exclusSet.has(exo.id)) {
+          const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true);
+          if (newId) {
+            const { data: newExo } = await supabase.from("exercices").select("*").eq("id", newId).single();
+            if (newExo) exo = newExo;
+          }
+        }
+        let chargeCible = 0;
+        if (exo) {
+          const { data: charge } = await supabase.from("charges").select("charge_actuelle").eq("user_id", prog.user_id).eq("exercice_id", exo.id).maybeSingle();
+          chargeCible = charge?.charge_actuelle ?? 0;
+          if (!charge) { await supabase.from("charges").insert({ user_id: prog.user_id, exercice_id: exo.id, charge_actuelle: 0, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 }); }
+        }
+        const series = seriesParExo.get(exo?.id || s.exercice_id) || Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exo?.id || s.exercice_id, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
+        const efforts = result.efforts || [];
+        const effortExo = efforts.find((e: any) => e.exercice_id === (exo?.id || s.exercice_id));
+        exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg" });
+      }
+      setExercices(exosAvecCharges);
     }
     setLoading(false);
   }, [router, supabase]);
@@ -285,19 +307,19 @@ export default function SeancePage() {
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0 mr-2">
                 <h3 className="font-semibold text-[15px] text-gymx-text" style={{ fontFamily: "var(--font-body)" }}>{exo.exercice.nom_fr || "Exercice"}</h3>
-                <p className="label text-[10px]">{exo.role === "principal" ? "Principal" : "Accessoire"}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="label text-[10px]">{exo.role === "principal" ? "Principal" : "Accessoire"}</p>
+                  {exo.structure_id && !exo.series.every((s) => s.validee) && (
+                    <button onClick={() => handleSwap(exoIdx)} className="flex items-center gap-0.5 text-[10px] font-medium transition-colors touch-target opacity-50 hover:opacity-100"
+                      style={{ color: "var(--color-gymx-muted)" }}>
+                      <RefreshCw className="w-3 h-3" /> Remplacer
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {exo.structure_id && !exo.series.every((s) => s.validee) && (
-                  <button onClick={() => handleSwap(exoIdx)} className="text-[10px] font-semibold px-1.5 py-1 rounded-lg transition-colors touch-target"
-                    style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
-                    ↻
-                  </button>
-                )}
-                <span className="text-sm font-mono font-medium" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
-                  {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
-                </span>
-              </div>
+              <span className="text-sm font-mono font-medium shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
+                {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
+              </span>
             </div>
 
             {exo.unite_actuelle !== "reps" && exo.charge_cible > 0 && !exo.series[0]?.validee && (

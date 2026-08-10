@@ -19,6 +19,7 @@ interface ExerciceEnCours {
   exercice: Exercice; structure_id: string; series_cibles: number; reps_cibles: number;
   charge_cible: number; role: string; fige: boolean;
   series: SerieLog[]; slider: Cran | null; slider_submitted: boolean; unite_actuelle: string;
+  chauffe: boolean[];
 }
 
 const unitesDisponibles = ["kg", "reps", "unité"];
@@ -60,6 +61,7 @@ export default function SeancePage() {
   const [saved, setSaved] = useState(false);
   const savingSeries = useRef(new Set<string>());
   const chronoExoId = useRef<string | null>(null);
+  const debutSeance = useRef<number | null>(null);
   const pathname = "/seance";
 
   const chargerSeance = useCallback(async () => {
@@ -121,7 +123,8 @@ export default function SeancePage() {
       const exoId = exo?.id || s.exercice_id;
       const series = seriesParExo.get(exoId) || Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exoId, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
       const effortExo = efforts.find((e: any) => e.exercice_id === exoId);
-      exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg" });
+      const chauffeSteps = calculerEchauffement(chargeCible, exo?.unite_par_defaut || "kg");
+      exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg", chauffe: chauffeSteps.map(() => false) });
     }
 
     for (const charge of chargesToInsert) await supabase.from("charges").insert(charge);
@@ -191,6 +194,7 @@ export default function SeancePage() {
       n[exoIdx] = { ...n[exoIdx], series: n[exoIdx].series.map((s, i) => i === serieIdx ? { ...s, validee: nouvelleValeur } : s) };
       return n;
     });
+    if (nouvelleValeur && debutSeance.current === null) debutSeance.current = Date.now();
     if (nouvelleValeur) {
       chronoExoId.current = exo.exercice.id;
       const savedRest = localStorage.getItem(`rest_${exo.exercice.id}`);
@@ -227,6 +231,7 @@ export default function SeancePage() {
           charge_cible: chargeCible,
           series: Array.from({ length: n[exoIdx].series_cibles }, (_, i) => ({ exercice_id: nextId, reps: n[exoIdx].reps_cibles, charge: chargeCible, validee: false, ordre: i })),
           slider: null, slider_submitted: false, unite_actuelle: nextExo.unite_par_defaut || "kg",
+          chauffe: calculerEchauffement(chargeCible, nextExo.unite_par_defaut || "kg").map(() => false),
         };
         return n;
       });
@@ -257,6 +262,22 @@ export default function SeancePage() {
     const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs }).eq("id", chargeData.id);
     if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, false, exo.exercice.groupe); }
+    const { data: derniereSeance } = await supabase
+      .from("effort")
+      .select("valeur, seance:seance_id!inner(id)")
+      .eq("user_id", user!.id)
+      .eq("exercice_id", exo.exercice.id)
+      .neq("seance_id", seanceId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (derniereSeance) {
+      const ancienRPE = (derniereSeance as any).valeur;
+      const diffRPE = rpe - ancienRPE;
+      if (diffRPE >= 2) setMessage(`⚠ RPE +${diffRPE} vs dernière fois — fatigue ou charge trop lourde ?`);
+      else if (diffRPE <= -2) setMessage(`✓ RPE ${diffRPE > 0 ? "+" : ""}${diffRPE} vs dernière fois — progrès !`);
+    }
+
     if (resultat.plateau_detecte || resultat.deload_suggere) {
       setMessage(`⚠ ${resultat.deload_suggere ? "Semaine allégée recommandée" : "Plateau détecté"}`);
       setTimeout(() => setMessage(""), 4000);
@@ -281,7 +302,8 @@ export default function SeancePage() {
         }
       }
 
-      const { error: seanceError } = await supabase.from("seances").update({ terminee: true, duree: 0 }).eq("id", seanceId);
+      const dureeReelle = debutSeance.current ? Math.round((Date.now() - debutSeance.current) / 1000) : 0;
+      const { error: seanceError } = await supabase.from("seances").update({ terminee: true, duree: dureeReelle }).eq("id", seanceId);
       if (seanceError) throw new Error("Erreur finalisation séance");
 
       xpGagne += 50;
@@ -366,12 +388,23 @@ export default function SeancePage() {
               </span>
             </div>
 
-            {exo.unite_actuelle !== "reps" && exo.charge_cible > 0 && !exo.series[0]?.validee && (
+            {exo.unite_actuelle !== "reps" && exo.charge_cible > 0 && !exo.series[0]?.validee && exo.chauffe.length > 0 && (
               <div className="flex gap-1 flex-wrap">
                 {calculerEchauffement(exo.charge_cible, exo.unite_actuelle).map((w, wi) => (
-                  <span key={wi} className="text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
-                    {w.label} ({w.charge} {exo.unite_actuelle})
-                  </span>
+                  <button key={wi} onClick={() => {
+                    setExercices((prev) => {
+                      const n = [...prev];
+                      n[exoIdx] = { ...n[exoIdx], chauffe: n[exoIdx].chauffe.map((c, ci) => ci === wi ? !c : c) };
+                      return n;
+                    });
+                  }}
+                    className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded touch-target transition-all"
+                    style={{
+                      backgroundColor: exo.chauffe[wi] ? "var(--color-gymx-accent)" : "var(--color-gymx-border)",
+                      color: exo.chauffe[wi] ? "#0a0a0b" : "var(--color-gymx-muted)",
+                    }}>
+                    {exo.chauffe[wi] ? "✓" : ""} {w.label} ({w.charge} {exo.unite_actuelle})
+                  </button>
                 ))}
               </div>
             )}

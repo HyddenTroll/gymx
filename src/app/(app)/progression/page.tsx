@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getPoidsCorps, getForceMax } from "@/lib/dashboard/dashboard-service";
 import { SkeletonCard } from "@/components/skeleton";
-import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar, Download } from "lucide-react";
+import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar, Download, TrendingUp as TrendIcon } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
 
 const navItems = [
@@ -28,6 +29,7 @@ export default function ProgressionPage() {
   const [editDate, setEditDate] = useState("");
   const [exoNomMap, setExoNomMap] = useState<Map<string, string>>(new Map());
   const [message, setMessage] = useState("");
+  const [evolutionData, setEvolutionData] = useState<Record<string, { date: string; charge: number }[]>>({});
   const pathname = "/progression";
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function ProgressionPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const { data: allExercises } = await supabase.from("exercices").select("id, nom_fr");
+      const { data: allExercises } = await supabase.from("exercices").select("id, nom_fr, role");
       const nomMap = new Map<string, string>((allExercises || []).map((e: any) => [e.id, e.nom_fr]));
       setExoNomMap(nomMap);
 
@@ -50,6 +52,31 @@ export default function ProgressionPage() {
         .limit(30);
 
       if (data) setSeances(data.filter((s: any) => s.terminee));
+
+      const idsPrincipaux = (allExercises || []).filter((e: any) => e.role === "principal").map((e: any) => e.id);
+      if (idsPrincipaux.length > 0) {
+        const { data: seriesEvo } = await supabase
+          .from("series")
+          .select("exercice_id, charge, seance:seance_id!inner(date)")
+          .eq("validee", true)
+          .in("exercice_id", idsPrincipaux)
+          .order("created_at", { ascending: false })
+          .limit(200);
+
+        if (seriesEvo) {
+          const grouped: Record<string, { date: string; charge: number }[]> = {};
+          for (const s of seriesEvo as any[]) {
+            const d = s.seance?.date?.split("T")[0];
+            if (!d) continue;
+            if (!grouped[s.exercice_id]) grouped[s.exercice_id] = [];
+            const existing = grouped[s.exercice_id].find((p) => p.date === d);
+            if (existing) { if (Number(s.charge) > existing.charge) existing.charge = Number(s.charge); }
+            else grouped[s.exercice_id].push({ date: d, charge: Number(s.charge) });
+          }
+          setEvolutionData(grouped);
+        }
+      }
+
       setLoading(false);
     })();
   }, [supabase]);
@@ -223,6 +250,35 @@ export default function ProgressionPage() {
             </div>
           )}
         </div>
+
+        {Object.keys(evolutionData).length > 0 && (
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <TrendIcon className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-muted)" }} />
+              <p className="label">Évolution des charges</p>
+            </div>
+            {Object.entries(evolutionData).map(([exoId, points]) => {
+              const data = points.sort((a, b) => a.date.localeCompare(b.date));
+              if (data.length < 2) return null;
+              return (
+                <div key={exoId} className="pt-1 border-t first:pt-0 first:border-t-0" style={{ borderColor: "var(--color-gymx-border)" }}>
+                  <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-gymx-muted)" }}>{exoNomMap.get(exoId) || "Exercice"}</p>
+                  <div style={{ height: 100 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data}>
+                        <XAxis dataKey="date" tick={{ fontSize: 8, fill: "var(--color-gymx-muted)" }} tickFormatter={(v: string) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} />
+                        <YAxis tick={{ fontSize: 8, fill: "var(--color-gymx-muted)" }} width={24} domain={["dataMin - 5", "dataMax + 5"]} />
+                        <Tooltip contentStyle={{ fontSize: "10px", backgroundColor: "var(--color-gymx-surface)", border: "1px solid var(--color-gymx-border)", borderRadius: "6px" }}
+                          labelFormatter={(v: any) => typeof v === "string" ? new Date(v).toLocaleDateString("fr-FR") : v} />
+                        <Line type="monotone" dataKey="charge" stroke="var(--color-gymx-accent)" strokeWidth={2} dot={{ r: 2 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">

@@ -54,7 +54,7 @@ export default function BibliothequePage() {
         .eq("exercice_id", exo.id)
         .eq("validee", true)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       const { data: efforts } = await supabase
         .from("effort")
@@ -243,7 +243,7 @@ export default function BibliothequePage() {
                           <LineChart data={data}>
                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: "var(--color-gymx-muted)" }} tickFormatter={(v: any) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} />
                             <YAxis tick={{ fontSize: 9, fill: "var(--color-gymx-muted)" }} width={30} />
-                            <Tooltip contentStyle={{ fontSize: "11px", backgroundColor: "var(--color-gymx-surface)", border: "1px solid var(--color-gymx-border)", borderRadius: "8px" }} labelFormatter={(v: any) => new Date(v).toLocaleDateString("fr-FR")} />
+                            <Tooltip contentStyle={{ fontSize: "11px", backgroundColor: "var(--color-gymx-surface)", border: "1px solid var(--color-gymx-border)", borderRadius: "8px" }} labelFormatter={(v: any) => typeof v === "string" ? new Date(v).toLocaleDateString("fr-FR") : v} />
                             <Line type="monotone" dataKey="charge" stroke="var(--color-gymx-accent)" strokeWidth={2} dot={{ r: 3 }} />
                           </LineChart>
                         </ResponsiveContainer>

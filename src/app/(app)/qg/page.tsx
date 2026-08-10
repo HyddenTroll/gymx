@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps, getFatigueParMuscle, getStaleExercices } from "@/lib/dashboard/dashboard-service";
+import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps, getFatigueParMuscle, getStaleExercices, getProgressTrend } from "@/lib/dashboard/dashboard-service";
 import CalendrierWidget from "@/components/calendrier-widget";
 import { calculerProgression, type ProgressionSimple } from "@/lib/dashboard/projections";
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
@@ -48,6 +48,7 @@ export default function QGPage() {
   const [pointsFaibles, setPointsFaibles] = useState<any[]>([]);
   const [fatigueMuscles, setFatigueMuscles] = useState<any[]>([]);
   const [staleExercices, setStaleExercices] = useState<any[]>([]);
+  const [trend, setTrend] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -83,8 +84,8 @@ export default function QGPage() {
           setCycleInfo(ci);
         }
 
-        const [pp, int, pf, fmus, stale] = await Promise.all([getPushPullRatio(user.id), getIntensiteDistribution(user.id), getPointsFaibles(user.id), getFatigueParMuscle(user.id), getStaleExercices(user.id)]);
-        setPushPull(pp); setIntensite(int); setPointsFaibles(pf); setFatigueMuscles(fmus); setStaleExercices(stale);
+        const [pp, int, pf, fmus, stale, tr] = await Promise.all([getPushPullRatio(user.id), getIntensiteDistribution(user.id), getPointsFaibles(user.id), getFatigueParMuscle(user.id), getStaleExercices(user.id), getProgressTrend(user.id)]);
+        setPushPull(pp); setIntensite(int); setPointsFaibles(pf); setFatigueMuscles(fmus); setStaleExercices(stale); setTrend(tr);
 
         const saved = localStorage.getItem("gymx_goals");
         if (saved) setGoals(JSON.parse(saved));
@@ -304,6 +305,67 @@ export default function QGPage() {
             </div>
           )}
         </div>
+
+        {trend && trend.exos.length > 0 && (
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-muted)" }} />
+                <p className="label">Tendance</p>
+              </div>
+              <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-muted)" }}>
+                {trend.en_progression}/{trend.total} en progression
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
+              <div className="h-full rounded-full" style={{
+                width: `${(trend.en_progression / Math.max(1, trend.total)) * 100}%`,
+                backgroundColor: trend.en_progression / Math.max(1, trend.total) >= 0.5 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)",
+              }} />
+            </div>
+            <div className="space-y-1.5">
+              {trend.exos.map((exo: any, i: number) => {
+                const fleche = exo.statut === "progression" ? "↑" : exo.statut === "regression" ? "↓" : "→";
+                const couleur = exo.statut === "progression" ? "var(--color-gymx-accent)" : exo.statut === "regression" ? "var(--color-gymx-text)" : "var(--color-gymx-muted)";
+                return (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="flex-1 min-w-0 mr-2">
+                      <span style={{ color: "var(--color-gymx-text)" }}>{exo.nom}</span>
+                      <span className="text-[10px] ml-1.5" style={{ color: "var(--color-gymx-muted)" }}>
+                        {exo.rm_avant} → {exo.rm_actuel} kg
+                      </span>
+                    </div>
+                    <span className="font-semibold shrink-0" style={{ color: couleur, fontSize: "13px" }}>
+                      {fleche} {exo.statut === "progression" ? "Progression" : exo.statut === "regression" ? "Régression" : exo.statut === "stagnation" ? "Stagnation" : "Stable"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {trend.tonnage_semaine > 0 && (
+              <div className="border-t pt-2 text-[10px]" style={{ borderColor: "var(--color-gymx-border)" }}>
+                <div className="flex items-center justify-between">
+                  <span style={{ color: "var(--color-gymx-muted)" }}>Tonnage semaine</span>
+                  <span className="font-mono font-semibold" style={{ color: "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }}>
+                    {(trend.tonnage_semaine / 1000).toFixed(1)}k kg
+                  </span>
+                </div>
+                {trend.tonnage_avant > 0 && (
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span style={{ color: "var(--color-gymx-muted)" }}>Semaine précédente</span>
+                    <span className="font-mono" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
+                      {(trend.tonnage_avant / 1000).toFixed(1)}k kg
+                      <span className="ml-1" style={{ color: trend.tonnage_semaine >= trend.tonnage_avant ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
+                        {trend.tonnage_semaine >= trend.tonnage_avant ? "↑" : "↓"}
+                        {Math.round(((trend.tonnage_semaine - trend.tonnage_avant) / Math.max(1, trend.tonnage_avant)) * 100)}%
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {staleExercices.length > 0 && (
           <div className="card p-4 space-y-2">

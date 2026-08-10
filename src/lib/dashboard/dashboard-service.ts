@@ -390,3 +390,134 @@ export async function getStaleExercices(userId: string): Promise<SuggestionVaria
 
   return suggestions;
 }
+
+export interface TrendExo {
+  exercice_id: string;
+  nom: string;
+  charge_actuelle: number;
+  charge_avant: number;
+  delta: number;
+  rm_actuel: number;
+  rm_avant: number;
+  statut: "progression" | "stable" | "stagnation" | "regression";
+}
+
+export interface TrendGlobal {
+  exos: TrendExo[];
+  total: number;
+  en_progression: number;
+  tonnage_semaine: number;
+  tonnage_avant: number;
+}
+
+export async function getProgressTrend(userId: string): Promise<TrendGlobal> {
+  const supabase = createClient();
+
+  const maintenant = new Date();
+  const ilY4Sem = new Date();
+  ilY4Sem.setDate(ilY4Sem.getDate() - 28);
+
+  const { data: seriesRecentes } = await supabase
+    .from("series")
+    .select("charge, reps, exercice_id, exercice:exercice_id!inner(nom_fr, role), seance:seance_id!inner(date)")
+    .eq("validee", true)
+    .eq("exercice.role", "principal")
+    .gte("seance.date", ilY4Sem.toISOString().split("T")[0])
+    .order("seance.date", { ascending: false });
+
+  const { data: seriesAnciennes } = await supabase
+    .from("series")
+    .select("charge, reps, exercice_id, exercice:exercice_id!inner(nom_fr, role), seance:seance_id!inner(date)")
+    .eq("validee", true)
+    .eq("exercice.role", "principal")
+    .lt("seance.date", ilY4Sem.toISOString().split("T")[0])
+    .gte("seance.date", new Date(ilY4Sem.getTime() - 28 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
+    .order("seance.date", { ascending: false });
+
+  const meilleurRM = (series: any[]): number => {
+    return series.reduce((best, s) => {
+      const rm = Number(s.charge) * (1 + Number(s.reps) / 30);
+      return rm > best ? rm : best;
+    }, 0);
+  };
+
+  const meilleureCharge = (series: any[]): number => {
+    return series.reduce((best, s) => Math.max(best, Number(s.charge)), 0);
+  };
+
+  const exosMap = new Map<string, { recents: any[]; anciens: any[]; nom: string }>();
+  for (const s of (seriesRecentes || [])) {
+    const id = (s as any).exercice_id;
+    if (!exosMap.has(id)) exosMap.set(id, { recents: [], anciens: [], nom: (s as any).exercice?.nom_fr || "" });
+    exosMap.get(id)!.recents.push(s);
+  }
+  for (const s of (seriesAnciennes || [])) {
+    const id = (s as any).exercice_id;
+    if (!exosMap.has(id)) exosMap.set(id, { recents: [], anciens: [], nom: (s as any).exercice?.nom_fr || "" });
+    exosMap.get(id)!.anciens.push(s);
+  }
+
+  const exos: TrendExo[] = [];
+  for (const [id, data] of exosMap) {
+    if (data.recents.length === 0 || data.anciens.length === 0) continue;
+    const rmRec = meilleurRM(data.recents);
+    const rmAnc = meilleurRM(data.anciens);
+    const chRec = meilleureCharge(data.recents);
+    const chAnc = meilleureCharge(data.anciens);
+
+    const { data: efforts } = await supabase
+      .from("effort")
+      .select("valeur, created_at")
+      .eq("exercice_id", id)
+      .order("created_at", { ascending: false })
+      .limit(6);
+
+    const recentsRPE = (efforts || []).filter((e: any) => new Date(e.created_at) >= ilY4Sem).map((e: any) => e.valeur);
+    const anciensRPE = (efforts || []).filter((e: any) => new Date(e.created_at) < ilY4Sem).map((e: any) => e.valeur);
+    const rpeRec = recentsRPE.length > 0 ? recentsRPE.reduce((a: number, b: number) => a + b, 0) / recentsRPE.length : 0;
+    const rpeAnc = anciensRPE.length > 0 ? anciensRPE.reduce((a: number, b: number) => a + b, 0) / anciensRPE.length : 0;
+
+    let statut: TrendExo["statut"] = "stable";
+    if (rmRec > rmAnc * 1.02) statut = "progression";
+    else if (rmRec < rmAnc * 0.98) statut = "regression";
+    else if (chRec <= chAnc && rpeRec > rpeAnc + 0.5) statut = "stagnation";
+
+    exos.push({
+      exercice_id: id,
+      nom: data.nom,
+      charge_actuelle: chRec,
+      charge_avant: chAnc,
+      delta: Math.round((chRec - chAnc) * 10) / 10,
+      rm_actuel: Math.round(rmRec),
+      rm_avant: Math.round(rmAnc),
+      statut,
+    });
+  }
+
+  const { data: tonnageSemaine } = await supabase
+    .from("series")
+    .select("charge, reps, seance:seance_id!inner(created_at)")
+    .eq("validee", true)
+    .gte("seance.created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+  const { data: tonnageAvant } = await supabase
+    .from("series")
+    .select("charge, reps, seance:seance_id!inner(created_at)")
+    .eq("validee", true)
+    .lt("seance.created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .gte("seance.created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
+
+  const calcTonnage = (data: any[] | null): number => {
+    return (data || []).reduce((sum, s: any) => sum + Number(s.charge) * Number(s.reps), 0);
+  };
+  const tonnageSemaineVal = calcTonnage(tonnageSemaine);
+  const tonnageAvantVal = calcTonnage(tonnageAvant);
+
+  return {
+    exos,
+    total: exos.length,
+    en_progression: exos.filter((e) => e.statut === "progression").length,
+    tonnage_semaine: tonnageSemaineVal,
+    tonnage_avant: tonnageAvantVal,
+  };
+}

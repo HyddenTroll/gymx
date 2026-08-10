@@ -8,6 +8,7 @@ import { calculerProgression, type ProgressionSimple } from "@/lib/dashboard/pro
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
 import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSousRegion } from "@/lib/dashboard/analytics";
 import { createClient } from "@/lib/supabase/client";
+import { BADGES, badgeIcon, getNiveauLabel } from "@/lib/gamification/gamification-service";
 import { SkeletonCard, SkeletonChart } from "@/components/skeleton";
 import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
@@ -147,6 +148,23 @@ export default function QGPage() {
             </div>
             {gamification.streak > 0 && (
               <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{gamification.streak} séances d&apos;affilée</p>
+            )}
+            {gamification.badges && gamification.badges.length > 0 && (
+              <>
+                <div className="border-t pt-2" style={{ borderColor: "var(--color-gymx-border)" }} />
+                <div className="flex flex-wrap gap-1.5">
+                  {(gamification.badges as string[]).slice(-8).reverse().map((b: string) => {
+                    const bg = BADGES.find((x) => x.id === b);
+                    return (
+                      <span key={b} className="text-[10px] font-semibold px-2 py-0.5 rounded-full touch-target"
+                        style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}
+                        title={bg?.desc || b}>
+                        {bg ? `${bg.icone} ${bg.label}` : `⭐ ${b}`}
+                      </span>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

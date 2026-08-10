@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculerProgressionRPE } from "@/lib/progression/engine";
 import { calculerEchauffement, getCoeffExercice } from "@/lib/dashboard/dashboard-service";
-import { initialiserGamification, ajouterXP, verifierRecords } from "@/lib/gamification/gamification-service";
+import { initialiserGamification, ajouterXP, verifierRecords, verifierQuetes, badgeIcon, badgeLabel } from "@/lib/gamification/gamification-service";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
@@ -295,9 +295,14 @@ export default function SeancePage() {
         await supabase.from("gamification").update({ streak: newStreak }).eq("id", g.id);
       }
 
+      const { badgeDecroche } = await verifierQuetes(user.id);
+
       setSaving(false);
-      if (nouveauRecord) setMessage(`🏆 Record battu ! +${xpGagne} XP`);
-      else setMessage(`+${xpGagne} XP gagné`);
+      let msg = "";
+      if (badgeDecroche) msg = `${badgeIcon(badgeDecroche)} Badge : ${badgeLabel(badgeDecroche)} !`;
+      else if (nouveauRecord) msg = `🏆 Record battu ! +${xpGagne} XP`;
+      else msg = `+${xpGagne} XP gagné`;
+      setMessage(msg);
       setTimeout(() => router.push("/qg"), 1200);
     } catch (e) {
       setMessage("Erreur lors de la sauvegarde — réessaie");

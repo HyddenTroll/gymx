@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { calculerProgressionRPE } from "@/lib/progression/engine";
+import { calculerProgressionRPE, suggererCharge, getRepRange, getPas } from "@/lib/progression/engine";
 import { calculerEchauffement, getCoeffExercice } from "@/lib/dashboard/dashboard-service";
 import { initialiserGamification, ajouterXP, verifierRecords, verifierQuetes, badgeIcon, badgeLabel, getNiveauLabel } from "@/lib/gamification/gamification-service";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
@@ -11,13 +11,13 @@ import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
 import { SkeletonCard } from "@/components/skeleton";
 import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
-import type { Cran, Exercice } from "@/types";
+import type { Cran, Exercice, Niveau, Objectif } from "@/types";
 import Link from "next/link";
 
 interface SerieLog { id?: string; exercice_id: string; reps: number; charge: number; validee: boolean; ordre: number; }
 interface ExerciceEnCours {
   exercice: Exercice; structure_id: string; series_cibles: number; reps_cibles: number;
-  charge_cible: number; role: string; fige: boolean;
+  charge_cible: number; charge_suggeree: number; pas_suggere: number; role: string; fige: boolean;
   series: SerieLog[]; slider: Cran | null; slider_submitted: boolean; unite_actuelle: string;
   chauffe: boolean[];
 }
@@ -70,9 +70,13 @@ export default function SeancePage() {
     setSeanceId(result.seance.id);
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     let exclusSet = new Set<string>();
+    let profilNiveau: Niveau = "intermediaire";
+    let profilObjectif: Objectif = "muscle";
     if (currentUser) {
       const { data: exclus } = await supabase.from("exercices_exclus").select("exercice_id").eq("user_id", currentUser.id);
       exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
+      const { data: p } = await supabase.from("profil").select("niveau, objectif").eq("user_id", currentUser.id).maybeSingle();
+      if (p) { profilNiveau = p.niveau; profilObjectif = p.objectif; }
     }
 
     const { data: prog } = await supabase.from("programme_actif").select("*").single();
@@ -123,8 +127,11 @@ export default function SeancePage() {
       const exoId = exo?.id || s.exercice_id;
       const series = seriesParExo.get(exoId) || Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exoId, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
       const effortExo = efforts.find((e: any) => e.exercice_id === exoId);
+      const { data: lastEffort } = currentUser ? await supabase.from("effort").select("valeur").eq("user_id", currentUser.id).eq("exercice_id", exoId).neq("seance_id", result.seance.id).order("created_at", { ascending: false }).limit(1).maybeSingle() : { data: null };
+      const dernierRPE = (lastEffort as any)?.valeur || null;
+      const sugg = suggererCharge(chargeCible, dernierRPE, { compound: exo?.compound || false, role: s.role }, profilNiveau, profilObjectif);
       const chauffeSteps = calculerEchauffement(chargeCible, exo?.unite_par_defaut || "kg");
-      exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg", chauffe: chauffeSteps.map(() => false) });
+      exosAvecCharges.push({ exercice: exo || ({} as Exercice), structure_id: s.id, series_cibles: s.series_cibles, reps_cibles: s.reps_cibles, charge_cible: chargeCible, charge_suggeree: sugg.charge, pas_suggere: sugg.pas, role: s.role, fige: s.fige, series, slider: effortExo?.cran || null, slider_submitted: !!effortExo, unite_actuelle: exo?.unite_par_defaut || "kg", chauffe: chauffeSteps.map(() => false) });
     }
 
     for (const charge of chargesToInsert) await supabase.from("charges").insert(charge);
@@ -229,6 +236,8 @@ export default function SeancePage() {
           ...n[exoIdx],
           exercice: nextExo,
           charge_cible: chargeCible,
+          charge_suggeree: chargeCible,
+          pas_suggere: getPas({ compound: nextExo.compound, role: n[exoIdx].role }),
           series: Array.from({ length: n[exoIdx].series_cibles }, (_, i) => ({ exercice_id: nextId, reps: n[exoIdx].reps_cibles, charge: chargeCible, validee: false, ordre: i })),
           slider: null, slider_submitted: false, unite_actuelle: nextExo.unite_par_defaut || "kg",
           chauffe: calculerEchauffement(chargeCible, nextExo.unite_par_defaut || "kg").map(() => false),
@@ -259,8 +268,9 @@ export default function SeancePage() {
     const { data: historique } = await supabase.from("effort").select("valeur").eq("user_id", user!.id).eq("exercice_id", exo.exercice.id).order("created_at", { ascending: false }).limit(5);
     const historiqueRPE = (historique || []).map((e: any) => e.valeur).reverse();
 
-    const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: chargeData.pas, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
-    await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs }).eq("id", chargeData.id);
+    const pasReel = exercices[exoIdx]?.pas_suggere || chargeData.pas;
+    const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: pasReel, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
+    await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs, pas: pasReel }).eq("id", chargeData.id);
     if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, false, exo.exercice.groupe); }
     const { data: derniereSeance } = await supabase
       .from("effort")
@@ -394,7 +404,16 @@ export default function SeancePage() {
                 </div>
               </div>
               <span className="text-sm font-mono font-medium shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
-                {exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
+                {exo.charge_suggeree > 0 ? (
+                  <div className="text-right">
+                    <div className="text-sm font-mono font-medium" style={{ color: "var(--color-gymx-accent)", fontFamily: "var(--font-mono)" }}>
+                      {exo.charge_suggeree} <span className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>{exo.unite_actuelle}</span>
+                    </div>
+                    <div className="text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
+                      pas de {exo.pas_suggere} kg
+                    </div>
+                  </div>
+                ) : exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
               </span>
             </div>
 

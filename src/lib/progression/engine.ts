@@ -1,4 +1,4 @@
-import type { Cran, Niveau, ExerciceConfig, ProgressionResult } from "@/types";
+import type { Cran, Niveau, ExerciceConfig, ProgressionResult, Objectif } from "@/types";
 
 function incrementFromRPE(rpe: number, niveau: Niveau): number {
   if (niveau === "debutant") {
@@ -122,4 +122,44 @@ export function calculerProgression(
     nouvelle_charge: result.nouvelle_charge,
     nouveau_compteur_echecs: result.nouveau_compteur_echecs,
   };
+}
+
+/** Pas recommandé selon le type d'exercice et niveau */
+export function getPas(exo: { compound: boolean; role: string }): number {
+  if (exo.role === "accessoire") return 1;
+  if (!exo.compound) return 1.25;
+  return 2.5;
+}
+
+/** Suggère la charge à viser pour la prochaine séance, avant même d'avoir logué un RPE */
+export function suggererCharge(
+  charge_actuelle: number,
+  dernier_rpe: number | null,
+  exo: { compound: boolean; role: string },
+  niveau: Niveau,
+  objectif: Objectif
+): { charge: number; pas: number } {
+  const pas = getPas(exo);
+  if (!charge_actuelle || charge_actuelle <= 0) return { charge: 0, pas };
+  if (dernier_rpe === null) return { charge: charge_actuelle, pas };
+
+  const coeffObjectif = objectif === "force" ? 1.2 : objectif === "muscle" ? 1.0 : 0.8;
+  const raw = incrementFromRPE(dernier_rpe, niveau) * coeffObjectif;
+  const incRound = Math.round(raw) || 0;
+
+  let suggeree = charge_actuelle + incRound * pas;
+  if (exo.role === "accessoire") {
+    const coeffAccessoire = 0.5;
+    suggeree = charge_actuelle + Math.round(incRound * coeffAccessoire) * pas;
+  }
+
+  return { charge: Math.max(0, suggeree), pas };
+}
+
+/** Fourchette de reps cible selon l'objectif et le rôle */
+export function getRepRange(exo: { compound: boolean; role: string }, objectif: Objectif): { min: number; max: number } {
+  if (objectif === "force" && exo.role === "principal") return { min: 3, max: 5 };
+  if (objectif === "force") return { min: 5, max: 8 };
+  if (exo.role === "accessoire" || !exo.compound) return { min: 10, max: 15 };
+  return { min: 6, max: 10 };
 }

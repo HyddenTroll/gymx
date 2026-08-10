@@ -16,7 +16,7 @@ import Link from "next/link";
 
 interface SerieLog { id?: string; exercice_id: string; reps: number; charge: number; validee: boolean; ordre: number; }
 interface ExerciceEnCours {
-  exercice: Exercice; structure_id: string; series_cibles: number; reps_cibles: number;
+  exercice: Exercice; structure_id: string | null; series_cibles: number; reps_cibles: number;
   charge_cible: number; charge_suggeree: number; pas_suggere: number; role: string; fige: boolean;
   series: SerieLog[]; slider: Cran | null; slider_submitted: boolean; unite_actuelle: string;
   chauffe: boolean[];
@@ -62,7 +62,99 @@ export default function SeancePage() {
   const savingSeries = useRef(new Set<string>());
   const chronoExoId = useRef<string | null>(null);
   const debutSeance = useRef<number | null>(null);
+  const userRef = useRef<any>(null);
+  const profilRef = useRef<{ niveau: Niveau; objectif: Objectif }>({ niveau: "intermediaire", objectif: "muscle" });
+  const [showAddExo, setShowAddExo] = useState(false);
+  const [addExoList, setAddExoList] = useState<any[]>([]);
+  const [addExoSearch, setAddExoSearch] = useState("");
+  const [addExoFilter, setAddExoFilter] = useState<string | null>(null);
+  const [addExoLoading, setAddExoLoading] = useState(false);
   const pathname = "/seance";
+
+  const groupesList = ["Pectoraux", "Épaules", "Dos", "Quadriceps", "Ischios/Fessiers", "Biceps", "Triceps", "Mollets", "Abdos"];
+
+  const ajouterExercice = async (exo: any) => {
+    const user = userRef.current;
+    if (!user || !seanceId) return;
+    const exoId = exo.id;
+    const existe = exercices.some((e) => e.exercice.id === exoId);
+    if (existe) return;
+
+    const { data: charge } = await supabase
+      .from("charges")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("exercice_id", exoId)
+      .maybeSingle();
+
+    const chargeCible = charge?.charge_actuelle ?? 0;
+    if (!charge) {
+      await supabase.from("charges").insert({
+        user_id: user.id, exercice_id: exoId, charge_actuelle: 0,
+        unite: exo.unite_par_defaut, pas: exo.pas_par_defaut,
+        sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0,
+      });
+    }
+
+    const { data: lastEffort } = await supabase
+      .from("effort")
+      .select("valeur")
+      .eq("user_id", user.id)
+      .eq("exercice_id", exoId)
+      .neq("seance_id", seanceId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const dernierRPE = (lastEffort as any)?.valeur || null;
+
+    const { niveau, objectif } = profilRef.current;
+    const sugg = suggererCharge(chargeCible, dernierRPE, { compound: exo.compound, role: "accessoire" }, niveau, objectif);
+    const chauffeSteps = calculerEchauffement(chargeCible, exo.unite_par_defaut || "kg");
+    const newExo: ExerciceEnCours = {
+      exercice: exo, structure_id: null, series_cibles: 3, reps_cibles: 10,
+      charge_cible: chargeCible, charge_suggeree: sugg.charge, pas_suggere: sugg.pas,
+      role: "accessoire", fige: false,
+      series: Array.from({ length: 3 }, (_, i) => ({ exercice_id: exoId, reps: 10, charge: chargeCible, validee: false, ordre: i })),
+      slider: null, slider_submitted: false, unite_actuelle: exo.unite_par_defaut || "kg",
+      chauffe: chauffeSteps.map(() => false),
+    };
+    setExercices((prev) => [...prev, newExo]);
+    setShowAddExo(false);
+  };
+
+  const addExoAleatoire = async () => {
+    const user = userRef.current;
+    if (!user) return;
+    const idsDansSeance = new Set(exercices.map((e) => e.exercice.id));
+    const dispo = addExoList.filter((e) => !idsDansSeance.has(e.id));
+    if (dispo.length === 0) { setMessage("Aucun exercice disponible"); setTimeout(() => setMessage(""), 2000); return; }
+    const alea = dispo[Math.floor(Math.random() * dispo.length)];
+    await ajouterExercice(alea);
+  };
+
+  const chargerListeExos = async () => {
+    if (addExoList.length > 0) { setShowAddExo(true); return; }
+    const user = userRef.current;
+    setAddExoLoading(true);
+    let q: any = supabase.from("exercices").select("*").order("nom_fr");
+    if (user) {
+      const { data: p } = await supabase.from("profil").select("materiel").eq("user_id", user.id).maybeSingle();
+      const { data: exclus } = await supabase.from("exercices_exclus").select("exercice_id").eq("user_id", user.id);
+      const exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
+      if (p?.materiel) q = q.eq("equipement", p.materiel);
+      const { data } = await q;
+      if (data) {
+        const dansSeanceIds = new Set(exercices.map((e) => e.exercice.id));
+        const filtered = data.filter((e: any) => !exclusSet.has(e.id) && !dansSeanceIds.has(e.id));
+        setAddExoList(filtered);
+      }
+    } else {
+      const { data } = await q;
+      if (data) setAddExoList(data);
+    }
+    setAddExoLoading(false);
+    setShowAddExo(true);
+  };
 
   const chargerSeance = useCallback(async () => {
     const result = await getOrCreateSeanceDuJour();
@@ -73,10 +165,11 @@ export default function SeancePage() {
     let profilNiveau: Niveau = "intermediaire";
     let profilObjectif: Objectif = "muscle";
     if (currentUser) {
+      userRef.current = currentUser;
       const { data: exclus } = await supabase.from("exercices_exclus").select("exercice_id").eq("user_id", currentUser.id);
       exclusSet = new Set((exclus || []).map((e: any) => e.exercice_id));
       const { data: p } = await supabase.from("profil").select("niveau, objectif").eq("user_id", currentUser.id).maybeSingle();
-      if (p) { profilNiveau = p.niveau; profilObjectif = p.objectif; }
+      if (p) { profilNiveau = p.niveau; profilObjectif = p.objectif; profilRef.current = { niveau: p.niveau, objectif: p.objectif }; }
     }
 
     const { data: prog } = await supabase.from("programme_actif").select("*").single();
@@ -271,7 +364,7 @@ export default function SeancePage() {
     const pasReel = exercices[exoIdx]?.pas_suggere || chargeData.pas;
     const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: pasReel, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs, pas: pasReel }).eq("id", chargeData.id);
-    if (exo.role === "accessoire" && !exo.fige) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, false, exo.exercice.groupe); }
+    if (exo.role === "accessoire" && !exo.fige && exo.structure_id) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, false, exo.exercice.groupe); }
     const { data: derniereSeance } = await supabase
       .from("effort")
       .select("valeur, seance:seance_id!inner(id)")
@@ -505,6 +598,84 @@ export default function SeancePage() {
             )}
           </div>
         ))}
+
+        {!saving && exercices.length > 0 && (
+          <div className="flex gap-2">
+            <button onClick={chargerListeExos} disabled={addExoLoading}
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold touch-target disabled:opacity-30"
+              style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+              + Ajouter
+            </button>
+            <button onClick={addExoAleatoire} disabled={addExoLoading || addExoList.length === 0}
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold touch-target disabled:opacity-30"
+              style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+              Aléatoire
+            </button>
+          </div>
+        )}
+
+        {showAddExo && (
+          <div className="fixed inset-0 z-50 flex flex-col safe-area-top safe-area-bottom" style={{ backgroundColor: "var(--color-gymx-bg)" }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--color-gymx-border)" }}>
+              <button onClick={() => setShowAddExo(false)} className="p-2 -ml-2 touch-target">
+                <span className="text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>Annuler</span>
+              </button>
+              <h2 className="card-title">Ajouter un exercice</h2>
+              <div className="w-14" />
+            </div>
+            <div className="p-4 space-y-3 flex-1 overflow-y-auto">
+              <div className="flex items-center gap-2 card px-3 py-2.5">
+                <input type="text" value={addExoSearch} onChange={(e) => setAddExoSearch(e.target.value)}
+                  placeholder="Rechercher..." className="flex-1 bg-transparent text-sm outline-none"
+                  style={{ fontSize: "16px", color: "var(--color-gymx-text)" }} />
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                <button onClick={() => setAddExoFilter(null)}
+                  className={"shrink-0 px-3 py-2 rounded-full text-[10px] font-semibold border touch-target " + (!addExoFilter ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted")}>Tous</button>
+                {groupesList.map((g) => (
+                  <button key={g} onClick={() => setAddExoFilter(g === addExoFilter ? null : g)}
+                    className={"shrink-0 px-3 py-2 rounded-full text-[10px] font-semibold border touch-target " + (addExoFilter === g ? "border-gymx-accent text-gymx-accent" : "border-gymx-border text-gymx-muted")}>{g}</button>
+                ))}
+              </div>
+              {addExoLoading ? (
+                <p className="text-sm text-center py-6" style={{ color: "var(--color-gymx-muted)" }}>Chargement...</p>
+              ) : (
+                <div className="space-y-2">
+                  {addExoList.filter((exo: any) => {
+                    if (addExoFilter && exo.groupe !== addExoFilter) return false;
+                    if (addExoSearch && !exo.nom_fr.toLowerCase().includes(addExoSearch.toLowerCase())) return false;
+                    return true;
+                  }).map((exo: any) => {
+                    const dejaDansSeance = exercices.some((e) => e.exercice.id === exo.id);
+                    return (
+                      <div key={exo.id} className="card p-3 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gymx-text truncate">{exo.nom_fr}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>{exo.groupe}</span>
+                            <span className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>{exo.equipement === "salle" ? "Salle" : exo.equipement === "halteres" ? "Haltères" : "Corps"}</span>
+                          </div>
+                        </div>
+                        <button onClick={() => ajouterExercice(exo)} disabled={dejaDansSeance}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-semibold touch-target disabled:opacity-30 shrink-0"
+                          style={{ backgroundColor: dejaDansSeance ? "var(--color-gymx-fill)" : "var(--color-gymx-accent)", color: dejaDansSeance ? "var(--color-gymx-muted)" : "#0a0a0b" }}>
+                          {dejaDansSeance ? "Déjà ajouté" : "Ajouter"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {addExoList.filter((exo: any) => {
+                    if (addExoFilter && exo.groupe !== addExoFilter) return false;
+                    if (addExoSearch && !exo.nom_fr.toLowerCase().includes(addExoSearch.toLowerCase())) return false;
+                    return true;
+                  }).length === 0 && (
+                    <p className="text-sm text-center py-6" style={{ color: "var(--color-gymx-muted)" }}>Aucun exercice trouvé.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {chrono !== null && chrono > 0 && (
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 card px-4 py-2.5 flex items-center gap-3 z-50 animate-fade-in"

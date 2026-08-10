@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculerProgressionRPE } from "@/lib/progression/engine";
 import { calculerEchauffement, getCoeffExercice } from "@/lib/dashboard/dashboard-service";
@@ -58,6 +58,7 @@ export default function SeancePage() {
   const [exercices, setExercices] = useState<ExerciceEnCours[]>([]);
   const [chrono, setChrono] = useState<number | null>(null); const [chronoRunning, setChronoRunning] = useState(false); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
+  const savingSeries = useRef(new Set<string>());
   const pathname = "/seance";
 
   const chargerSeance = useCallback(async () => {
@@ -143,8 +144,11 @@ export default function SeancePage() {
     if (!seanceId) return;
     const exo = exercices[exoIdx];
     const serie = exo.series[serieIdx];
+    const key = `${serie.exercice_id}-${serieIdx}`;
+    if (savingSeries.current.has(key)) return;
+    savingSeries.current.add(key);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { savingSeries.current.delete(key); return; }
     await supabase.from("series").upsert({
       seance_id: seanceId,
       exercice_id: serie.exercice_id,
@@ -154,6 +158,7 @@ export default function SeancePage() {
       validee: serie.validee,
       ordre: serie.ordre,
     });
+    savingSeries.current.delete(key);
     setSaved(true); setTimeout(() => setSaved(false), 1500);
   };
 
@@ -233,36 +238,44 @@ export default function SeancePage() {
   const sauverSeance = async () => {
     if (!seanceId) return; setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); return; }
     let xpGagne = 0; let nouveauRecord = false;
 
-    for (const exo of exercices) {
-      for (const serie of exo.series) {
-        if (serie.validee) {
-          await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre });
-          const estRecord = await verifierRecords(user.id, serie.exercice_id, serie.charge, serie.reps);
-          if (estRecord) { nouveauRecord = true; xpGagne += 100; }
+    try {
+      for (const exo of exercices) {
+        for (const serie of exo.series) {
+          if (serie.validee) {
+            const { error } = await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre });
+            if (error) throw new Error("Erreur sauvegarde séries");
+            const estRecord = await verifierRecords(user.id, serie.exercice_id, serie.charge, serie.reps);
+            if (estRecord) { nouveauRecord = true; xpGagne += 100; }
+          }
         }
       }
+
+      const { error: seanceError } = await supabase.from("seances").update({ terminee: true, duree: 0 }).eq("id", seanceId);
+      if (seanceError) throw new Error("Erreur finalisation séance");
+
+      xpGagne += 50;
+      await initialiserGamification(user.id);
+      if (xpGagne > 0) await ajouterXP(user.id, xpGagne, "séance terminée");
+      await incrementerSemaine(user.id);
+
+      const { data: g } = await supabase.from("gamification").select("*").eq("user_id", user.id).single();
+      if (g) {
+        const newStreak = g.streak + 1;
+        await supabase.from("gamification").update({ streak: newStreak }).eq("id", g.id);
+      }
+
+      setSaving(false);
+      if (nouveauRecord) setMessage(`🏆 Record battu ! +${xpGagne} XP`);
+      else setMessage(`+${xpGagne} XP gagné`);
+      setTimeout(() => router.push("/qg"), 1200);
+    } catch (e) {
+      setMessage("Erreur lors de la sauvegarde — réessaie");
+      setSaving(false);
+      setTimeout(() => setMessage(""), 3000);
     }
-    await supabase.from("seances").update({ terminee: true, duree: 0 }).eq("id", seanceId);
-    xpGagne += 50;
-
-    await initialiserGamification(user.id);
-    if (xpGagne > 0) await ajouterXP(user.id, xpGagne, "séance terminée");
-
-    await incrementerSemaine(user.id);
-
-    const { data: g } = await supabase.from("gamification").select("*").eq("user_id", user.id).single();
-    if (g) {
-      const newStreak = g.streak + 1;
-      await supabase.from("gamification").update({ streak: newStreak }).eq("id", g.id);
-    }
-
-    setSaving(false);
-    if (nouveauRecord) setMessage(`🏆 Record battu ! +${xpGagne} XP`);
-    else setMessage(`+${xpGagne} XP gagné`);
-    setTimeout(() => router.push("/qg"), 1200);
   };
 
   if (loading) return (<div className="min-h-dvh flex flex-col p-4 space-y-3" style={{ minHeight: "100dvh" }}><SkeletonCard /><SkeletonCard /><SkeletonCard lines={2} /></div>);

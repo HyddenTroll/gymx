@@ -52,6 +52,14 @@ export async function getOrCreateSeanceDuJour(): Promise<{
 
   const today = new Date().toISOString().split("T")[0];
 
+  await supabase
+    .from("seances")
+    .update({ annulee: true })
+    .eq("user_id", user.id)
+    .eq("terminee", false)
+    .eq("annulee", false)
+    .lt("date", today);
+
   const { data: seanceExistante } = await supabase
     .from("seances")
     .select("*")

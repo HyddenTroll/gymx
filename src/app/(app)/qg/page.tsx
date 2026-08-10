@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import CalendrierWidget from "@/components/calendrier-widget";
-import { calculerProjections, type Projection } from "@/lib/dashboard/projections";
+import { calculerProgression, type ProgressionSimple } from "@/lib/dashboard/projections";
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
 import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSousRegion } from "@/lib/dashboard/analytics";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +23,8 @@ const navItems = [
 
 export default function QGPage() {
   const supabase = createClient();
+  const pathname = usePathname();
+  const [calRefreshKey, setCalRefreshKey] = useState(0);
   const [forceMax, setForceMax] = useState<any[]>([]);
   const [volume, setVolume] = useState<any[]>([]);
   const [freq, setFreq] = useState<any[]>([]);
@@ -31,7 +34,7 @@ export default function QGPage() {
   const [rmHistory, setRmHistory] = useState<any[]>([]);
   const [gamification, setGamification] = useState<any>(null);
   const [profil, setProfil] = useState<any>(null);
-  const [projections, setProjections] = useState<Projection[]>([]);
+  const [projections, setProjections] = useState<ProgressionSimple[]>([]);
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState<Record<string, number>>({});
   const [goalModal, setGoalModal] = useState<{ exoId: string; nom: string; current: number } | null>(null);
@@ -42,7 +45,6 @@ export default function QGPage() {
   const [pushPull, setPushPull] = useState<any>(null);
   const [intensite, setIntensite] = useState<any>(null);
   const [pointsFaibles, setPointsFaibles] = useState<any[]>([]);
-  const pathname = "/qg";
 
   useEffect(() => {
     (async () => {
@@ -67,7 +69,7 @@ export default function QGPage() {
         if (g) setGamification(g);
         const { data: p } = await supabase.from("profil").select("*").eq("user_id", user.id).maybeSingle();
         if (p) setProfil(p);
-        const projs = await calculerProjections(user.id);
+        const projs = await calculerProgression(user.id);
         setProjections(projs);
 
         const { data: prog } = await supabase.from("programme_actif").select("*").eq("user_id", user.id).maybeSingle();
@@ -85,7 +87,8 @@ export default function QGPage() {
       }
       setLoading(false);
     })();
-  }, [supabase]);
+    setCalRefreshKey((k) => k + 1);
+  }, [supabase, pathname]);
 
   if (loading) return (
     <div className="min-h-dvh flex items-center justify-center" style={{ minHeight: "100dvh", backgroundColor: "var(--color-gymx-bg)" }}>
@@ -313,9 +316,9 @@ export default function QGPage() {
           </div>
         )}
 
-        {projections.length > 0 && effort && (
+        {effort && effort.total > 0 && (
           <div className="card p-4 space-y-2">
-            <p className="label">Fatigue estimée <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(récupération)</span></p>
+            <p className="label">Récupération</p>
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs"
                 style={{ backgroundColor: (effort.moyenne || 0) >= 8 ? "rgba(245,158,11,0.2)" : "var(--color-gymx-fill)", color: (effort.moyenne || 0) >= 8 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
@@ -328,7 +331,7 @@ export default function QGPage() {
                 <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
                   {(effort.moyenne || 0) >= 8
                     ? "RPE moyen ≥ 8 sur les dernières séances — envisage un deload"
-                    : `RPE moyen ${effort.moyenne} — bonne gestion de l'effort`}
+                    : `RPE moyen ${effort.moyenne} — bonne gestion`}
                 </p>
               </div>
             </div>
@@ -337,12 +340,10 @@ export default function QGPage() {
 
         {projections.length > 0 && (
           <div className="card p-4 space-y-3">
-            <p className="label">Projections <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(taper pour fixer un objectif)</span></p>
+            <p className="label">Progression par exo <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(taper pour fixer un objectif)</span></p>
             {projections.map((p, i) => {
-              const tendanceIcon = p.tendance === "hausse" ? "↗" : p.tendance === "baisse" ? "↘" : "→";
-              const fiabiliteColor = p.fiabilite === "elevee" ? "var(--color-gymx-muted)" : "var(--color-gymx-accent)";
               const goal = goals[p.exercice_id];
-              const goalWeeks = goal && p.taux_ema > 0 ? Math.round((goal - p.charge_actuelle) / p.taux_ema) : null;
+              const goalWeeks = goal && p.moyenne_hebdo > 0 ? Math.round((goal - p.charge_actuelle) / p.moyenne_hebdo) : null;
               return (
                 <div key={i} className="space-y-1.5 border-b pb-2 touch-target active:opacity-60" style={{ borderColor: "var(--color-gymx-border)" }}
                   onClick={() => setGoalModal({ exoId: p.exercice_id, nom: p.nom, current: p.charge_actuelle })}>
@@ -353,16 +354,18 @@ export default function QGPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono" style={{ fontFamily: "var(--font-mono)", color: "var(--color-gymx-text)" }}>{p.charge_actuelle} kg</span>
-                      <span className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>{tendanceIcon} {p.taux_ema > 0 ? p.taux_ema : p.taux_hebdo}/sem</span>
+                      {p.delta !== 0 && (
+                        <span className="text-xs font-semibold" style={{ color: p.delta > 0 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
+                          {p.delta > 0 ? "+" : ""}{p.delta}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min((p.projection_8sem / (p.charge_actuelle * 2)) * 100, 100)}%`, backgroundColor: p.tendance === "hausse" ? "var(--color-gymx-accent)" : "var(--color-gymx-fill-strong)" }} />
-                  </div>
-                  <div className="flex justify-between text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>
-                    <span>Maintenant · {p.charge_actuelle} kg</span>
-                    <span>4 sem · {p.projection_4sem} kg</span>
-                    <span>8 sem · {p.projection_8sem} kg</span>
+                  <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>
+                    <span>Dernière charge : {p.charge_precedente || "—"} kg</span>
+                    {p.moyenne_hebdo > 0 && (
+                      <span>· ~{p.moyenne_hebdo} kg/sem</span>
+                    )}
                   </div>
                   {goal && (
                     <div className="flex items-center gap-2 text-[10px]">
@@ -371,19 +374,11 @@ export default function QGPage() {
                       </span>
                       {p.charge_actuelle < goal && (
                         <span style={{ color: "var(--color-gymx-muted)" }}>
-                          {goalWeeks !== null ? `(~${goalWeeks} sem)` : "Taux insuffisant"}
+                          {goalWeeks !== null ? `(~${goalWeeks} sem)` : ""}
                         </span>
                       )}
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-[10px]">
-                    <span className="font-semibold" style={{ color: fiabiliteColor }}>
-                      Fiabilité : {p.fiabilite === "elevee" ? "Élevée" : p.fiabilite === "moyenne" ? "Moyenne" : "Faible"}
-                    </span>
-                    <span className="text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
-                      EMA : {p.taux_ema} kg/sem
-                    </span>
-                  </div>
                   {p.alerte_deload && (
                     <p className="text-xs font-semibold" style={{ color: "var(--color-gymx-accent)" }}>
                       ⚠ Semaine allégée recommandée — RPE élevé constant
@@ -481,7 +476,7 @@ export default function QGPage() {
                 const p = projections.find(pr => pr.exercice_id === goalModal.exoId)!;
                 const target = parseFloat(goalInput);
                 const diff = target - p.charge_actuelle;
-                const weeks = p.taux_ema > 0 ? Math.round(diff / p.taux_ema) : null;
+                const weeks = p.moyenne_hebdo > 0 ? Math.round(diff / p.moyenne_hebdo) : null;
                 return (
                   <div className="space-y-1">
                     <p className="text-sm">
@@ -494,9 +489,6 @@ export default function QGPage() {
                         <div className="h-full rounded-full" style={{ width: `${Math.min((target / (p.charge_actuelle * 2)) * 100, 100)}%`, backgroundColor: "var(--color-gymx-accent)" }} />
                       </div>
                     )}
-                    <p className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>
-                      Fourchette estimée : {Math.round(target * 0.9)}–{Math.round(target * 1.1)} kg (marge d&apos;erreur ±10%)
-                    </p>
                   </div>
                 );
               })()
@@ -526,7 +518,7 @@ export default function QGPage() {
         </div>
       )}
 
-      <CalendrierWidget />
+      <CalendrierWidget refreshKey={calRefreshKey} />
 
       <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
         {navItems.map((item) => {

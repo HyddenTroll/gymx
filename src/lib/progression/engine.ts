@@ -86,7 +86,7 @@ export function calculerProgressionRPE(
   if (rpeClamp >= 9) {
     return {
       increment_count: Math.round(adjusted) || 0,
-      deload: true,
+      deload: deload_force,
       deload_suggere: true,
       plateau_detecte,
       nouvelle_charge: Math.max(0, charge_actuelle + Math.round(adjusted) * config.pas),

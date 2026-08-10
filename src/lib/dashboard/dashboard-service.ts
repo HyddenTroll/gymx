@@ -148,13 +148,11 @@ export async function getEffortMoyen() {
     .select("valeur, seance:seance_id!inner(date)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(10);
 
   if (!data || data.length === 0) return { moyenne: 0, total: 0, trop_dur: false };
 
-  const recent = data.slice(0, 10);
-  const avg = recent.reduce((sum: number, e: any) => sum + e.valeur, 0) / recent.length;
-
+  const avg = data.reduce((sum: number, e: any) => sum + e.valeur, 0) / data.length;
   const hardCount = data.filter((e: any) => e.valeur >= 9).length;
 
   return {
@@ -187,14 +185,18 @@ export async function getRegularite() {
 
   if (!seances || seances.length === 0) return { streak: 0, taux: 0 };
 
+  const todayDate = new Date();
+  const datesUniques = Array.from(new Set((seances as any[]).map((s: any) => s.date)))
+    .sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
+
   let streak = 0;
-  for (const s of seances as any[]) {
-    const diff = Math.round(
-      (new Date().getTime() - new Date(s.date + "T00:00:00").getTime())
-      / (1000 * 60 * 60 * 24)
-    );
-    if (diff === streak || diff === streak + 1) {
+  let expectedDate = new Date(todayDate);
+  for (const dateStr of datesUniques) {
+    const d = new Date(dateStr + "T00:00:00");
+    const diff = Math.round((expectedDate.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff === 0 || diff === 1) {
       streak++;
+      expectedDate = d;
     } else break;
   }
 

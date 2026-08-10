@@ -90,11 +90,11 @@ describe("calculerProgression", () => {
   });
 
   describe("deload — §5.5 + §5.6", () => {
-    it("premier impossible → deload -1, compteur = 1", () => {
+    it("premier impossible → pas de deload forcé, compteur = 1 (deload seulement si historique 2× RPE≥9)", () => {
       const result = calculerProgression("impossible", "intermediaire", config({ compteur_echecs: 0 }), 50);
       expect(result.nouvelle_charge).toBe(47.5);
       expect(result.nouveau_compteur_echecs).toBe(1);
-      expect(result.deload).toBe(true);
+      expect(result.deload).toBe(false);
     });
 
     it("deuxième impossible consécutif → deload -1, compteur = 2", () => {

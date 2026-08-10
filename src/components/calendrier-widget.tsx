@@ -19,7 +19,7 @@ const TYPE_UNITES: Record<string, { duree: string; distance: string }> = {
   autre: { duree: "min", distance: "" },
 };
 
-export default function CalendrierWidget() {
+export default function CalendrierWidget({ refreshKey }: { refreshKey?: number }) {
   const supabase = createClient();
   const today = new Date();
   const [annee, setAnnee] = useState(today.getFullYear());
@@ -57,7 +57,7 @@ export default function CalendrierWidget() {
       }
       setLoading(false);
     })();
-  }, [annee, mois]);
+  }, [annee, mois, refreshKey]);
 
   const joursDansMois = new Date(annee, mois, 0).getDate();
   const premierJour = new Date(annee, mois - 1, 1).getDay();

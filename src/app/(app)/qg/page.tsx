@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps } from "@/lib/dashboard/dashboard-service";
+import { getForceMax, getVolumeSemaine, getFrequenceMuscles, getEffortMoyen, getRegularite, getPoidsCorps, getFatigueParMuscle, getStaleExercices } from "@/lib/dashboard/dashboard-service";
 import CalendrierWidget from "@/components/calendrier-widget";
 import { calculerProgression, type ProgressionSimple } from "@/lib/dashboard/projections";
 import { verifierCycle, executerDeload } from "@/lib/programme/cycles";
@@ -46,6 +46,8 @@ export default function QGPage() {
   const [pushPull, setPushPull] = useState<any>(null);
   const [intensite, setIntensite] = useState<any>(null);
   const [pointsFaibles, setPointsFaibles] = useState<any[]>([]);
+  const [fatigueMuscles, setFatigueMuscles] = useState<any[]>([]);
+  const [staleExercices, setStaleExercices] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -81,8 +83,8 @@ export default function QGPage() {
           setCycleInfo(ci);
         }
 
-        const [pp, int, pf] = await Promise.all([getPushPullRatio(user.id), getIntensiteDistribution(user.id), getPointsFaibles(user.id)]);
-        setPushPull(pp); setIntensite(int); setPointsFaibles(pf);
+        const [pp, int, pf, fmus, stale] = await Promise.all([getPushPullRatio(user.id), getIntensiteDistribution(user.id), getPointsFaibles(user.id), getFatigueParMuscle(user.id), getStaleExercices(user.id)]);
+        setPushPull(pp); setIntensite(int); setPointsFaibles(pf); setFatigueMuscles(fmus); setStaleExercices(stale);
 
         const saved = localStorage.getItem("gymx_goals");
         if (saved) setGoals(JSON.parse(saved));
@@ -176,24 +178,34 @@ export default function QGPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <RefreshCw className="w-4 h-4 shrink-0" style={{ color: cycleInfo.deloadDue ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
-                <p className="label">Cycle <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(mésocycle)</span></p>
+                <p className="label">
+                  {cycleInfo.phase === "accumulation" ? "Accumulation" : cycleInfo.phase === "intensification" ? "Intensification" : "Deload"}
+                  <span style={{ fontFamily: "var(--font-body)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}> — cycle {cycleInfo.cycleCourant}</span>
+                </p>
               </div>
               <span className="text-xs font-semibold" style={{ color: cycleInfo.deloadDue ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
-                Semaine {cycleInfo.semaine}/{cycleInfo.total}
+                Semaine {cycleInfo.phaseSemaine}/{cycleInfo.phaseTotal}
               </span>
             </div>
-            {cycleInfo.deloadDue && (
+            <p className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>{cycleInfo.intensiteNote}</p>
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map((s) => (
+                <div key={s} className="h-1 flex-1 rounded-full"
+                  style={{ backgroundColor: s <= cycleInfo.phaseSemaine ? "var(--color-gymx-accent)" : "var(--color-gymx-fill)" }} />
+              ))}
+            </div>
+            {cycleInfo.deloadDue && cycleInfo.phase !== "deload" && (
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: "var(--color-gymx-accent)" }} />
                 <p className="text-xs flex-1" style={{ color: "var(--color-gymx-accent)" }}>
-                  Semaine allégée recommandée (deload)
+                  Deload recommandé la semaine prochaine
                 </p>
                 <button onClick={async () => {
                   setDeloading(true);
                   const { data: { user } } = await supabase.auth.getUser();
                   if (user) await executerDeload(user.id);
                   setDeloading(false);
-                  setMessage("✓ Deload exécuté — charges réduites");
+                  setMessage("✓ Deload exécuté");
                   setTimeout(() => setMessage(""), 3000);
                 }} disabled={deloading}
                   className="text-xs font-semibold px-3 py-2 rounded-xl touch-target disabled:opacity-30"
@@ -293,6 +305,27 @@ export default function QGPage() {
           )}
         </div>
 
+        {staleExercices.length > 0 && (
+          <div className="card p-4 space-y-2">
+            <p className="label">Variation suggérée</p>
+            <p className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>Ces exos stagnent → change de variante</p>
+            <div className="space-y-1.5">
+              {staleExercices.map((s: any, i: number) => {
+                const raison = s.chargeStable && s.rpeStable ? "Charge + RPE stables" : s.chargeStable ? "Charge bloquée" : "RPE élevé répété";
+                return (
+                  <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                    <div>
+                      <span style={{ color: "var(--color-gymx-text)" }}>{s.nom}</span>
+                      <span className="text-[10px] ml-1.5" style={{ color: "var(--color-gymx-muted)" }}>({s.nbSeances} séances)</span>
+                    </div>
+                    <span className="text-[10px] font-semibold" style={{ color: "var(--color-gymx-accent)" }}>{raison}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {freq.length > 0 && (
           <div className="card p-4 space-y-2">
             <p className="label">Fréquence cette semaine</p>
@@ -356,27 +389,27 @@ export default function QGPage() {
           </div>
         )}
 
-        {effort && effort.total > 0 && (
+        {fatigueMuscles.length > 0 && (
           <div className="card p-4 space-y-2">
-            <p className="label">Récupération</p>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs"
-                style={{ backgroundColor: effort.fatigue_score >= 7 ? "rgba(245,158,11,0.2)" : "var(--color-gymx-fill)", color: effort.fatigue_score >= 7 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
-                {effort.fatigue_score >= 7 ? "!" : effort.fatigue_score >= 4 ? "~" : "✓"}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold">
-                  Score fatigue : {effort.fatigue_score}/10
-                </p>
-                <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
-                  RPE moyen {effort.moyenne} · Tendance {effort.tendance === "hausse" ? "↗ hausse" : effort.tendance === "baisse" ? "↘ baisse" : "→ stable"}
-                </p>
-                {effort.fatigue_score >= 7 && (
-                  <p className="text-xs font-semibold mt-1" style={{ color: "var(--color-gymx-accent)" }}>
-                    Fatigue élevée — envisage un deload
-                  </p>
-                )}
-              </div>
+            <p className="label">Récupération par muscle</p>
+            <div className="space-y-2">
+              {fatigueMuscles.filter((m: any) => m.jours_depuis < 14).map((m: any) => {
+                const couleur = m.recup_pct >= 100 ? "var(--color-gymx-accent)" : m.recup_pct >= 60 ? "var(--color-gymx-fill-strong)" : "var(--color-gymx-text)";
+                return (
+                  <div key={m.groupe} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span style={{ color: "var(--color-gymx-muted)" }}>{m.groupe}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-semibold" style={{ color: couleur, fontFamily: "var(--font-mono)" }}>{m.recup_pct}%</span>
+                        {m.dernier_rpe && <span className="text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>RPE {m.dernier_rpe}</span>}
+                      </div>
+                    </div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(m.recup_pct, 100)}%`, backgroundColor: couleur }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

@@ -251,6 +251,62 @@ export async function getRegularite() {
   return { streak, taux };
 }
 
+export interface FatigueMuscle {
+  groupe: string;
+  recup_pct: number;
+  jours_depuis: number;
+  dernier_rpe: number | null;
+}
+
+export async function getFatigueParMuscle(userId: string): Promise<FatigueMuscle[]> {
+  const supabase = createClient();
+
+  const SEUILS: Record<string, { recup_jours: number }> = {
+    Pectoraux: { recup_jours: 2 }, Épaules: { recup_jours: 2 }, Triceps: { recup_jours: 1.5 },
+    Dos: { recup_jours: 2.5 }, Biceps: { recup_jours: 1.5 },
+    Quadriceps: { recup_jours: 2.5 }, ["Ischios/Fessiers"]: { recup_jours: 2.5 },
+    Mollets: { recup_jours: 1.5 }, Abdos: { recup_jours: 1.5 },
+  };
+
+  const groupes = Object.keys(SEUILS);
+  const maintenant = new Date();
+  const resultats: FatigueMuscle[] = [];
+
+  for (const groupe of groupes) {
+    const { data: serie } = await supabase
+      .from("series")
+      .select("created_at, exercice:exercice_id!inner(groupe), seance:seance_id!inner(id)")
+      .eq("exercice.groupe", groupe)
+      .eq("validee", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!serie) {
+      resultats.push({ groupe, recup_pct: 100, jours_depuis: 99, dernier_rpe: null });
+      continue;
+    }
+
+    const dateSerie = new Date((serie as any).created_at);
+    const joursDepuis = Math.max(0, (maintenant.getTime() - dateSerie.getTime()) / (1000 * 60 * 60 * 24));
+
+    const { data: effort } = await supabase
+      .from("effort")
+      .select("valeur")
+      .eq("seance_id", (serie as any).seance_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const rpe = (effort as any)?.valeur || 5;
+    const recupJours = SEUILS[groupe]?.recup_jours || 2;
+    const recupPct = Math.min(100, Math.round((joursDepuis / recupJours) * 100));
+
+    resultats.push({ groupe, recup_pct: recupPct, jours_depuis: Math.round(joursDepuis * 10) / 10, dernier_rpe: rpe });
+  }
+
+  return resultats;
+}
+
 export async function getPoidsCorps() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -264,4 +320,73 @@ export async function getPoidsCorps() {
     .limit(30);
 
   return (data || []).map((d: any) => ({ date: d.date, poids: Number(d.poids) }));
+}
+
+export interface SuggestionVariation {
+  exercice_id: string;
+  nom: string;
+  groupe: string;
+  nbSeances: number;
+  chargeStable: boolean;
+  rpeStable: boolean;
+}
+
+export async function getStaleExercices(userId: string): Promise<SuggestionVariation[]> {
+  const supabase = createClient();
+
+  const { data: prog } = await supabase.from("programme_actif").select("id").eq("user_id", userId).maybeSingle();
+  if (!prog) return [];
+
+  const { data: structures } = await supabase
+    .from("programme_structure")
+    .select("exercice_id")
+    .eq("programme_actif_id", prog.id)
+    .eq("role", "principal");
+
+  if (!structures) return [];
+
+  const suggestions: SuggestionVariation[] = [];
+
+  for (const s of structures) {
+    const { data: series } = await supabase
+      .from("series")
+      .select("charge, created_at, seance:seance_id!inner(date)")
+      .eq("exercice_id", s.exercice_id)
+      .eq("validee", true)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (!series || series.length < 3) continue;
+
+    const datesUniques = new Set((series as any[]).map((ser: any) => ser.seance?.date)).size;
+    if (datesUniques < 3) continue;
+
+    const { data: exo } = await supabase.from("exercices").select("nom_fr, groupe").eq("id", s.exercice_id).single();
+    if (!exo) continue;
+
+    const charges = (series as any[]).map((ser: any) => Number(ser.charge));
+    const chargeStable = charges.length >= 3 && charges.slice(0, 3).every((c: number) => c === charges[0]);
+
+    const { data: efforts } = await supabase
+      .from("effort")
+      .select("valeur")
+      .eq("exercice_id", s.exercice_id)
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    const rpeStable = efforts && efforts.length >= 3 && (efforts as any[]).every((e: any) => e.valeur >= 7);
+
+    if (chargeStable || rpeStable) {
+      suggestions.push({
+        exercice_id: s.exercice_id,
+        nom: exo.nom_fr,
+        groupe: exo.groupe,
+        nbSeances: datesUniques,
+        chargeStable,
+        rpeStable: !!rpeStable,
+      });
+    }
+  }
+
+  return suggestions;
 }

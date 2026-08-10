@@ -100,9 +100,23 @@ export async function getVolumeSemaine(): Promise<{ groupe: string; sets: number
 
   if (!data) return [];
 
-  const volume = new Map<string, { groupe: GroupeMuscle; sets: number }>();
+  const GROUPE_NORMALIZE: Record<string, GroupeMuscle> = {
+    pectoraux: "pectoraux", Pectoraux: "pectoraux", PECTORAUX: "pectoraux",
+    epaules: "epaules", Épaules: "epaules", EPAULES: "epaules",
+    dos: "dos", Dos: "dos", DOS: "dos",
+    quadriceps: "quadriceps", Quadriceps: "quadriceps", QUADRICEPS: "quadriceps",
+    ["ischios/fessiers"]: "ischios_fessiers", ["Ischios/Fessiers"]: "ischios_fessiers",
+    ischios_fessiers: "ischios_fessiers", Ischios_fessiers: "ischios_fessiers",
+    biceps: "biceps", Biceps: "biceps", BICEPS: "biceps",
+    triceps: "triceps", Triceps: "triceps", TRICEPS: "triceps",
+    mollets: "mollets", Mollets: "mollets", MOLLETS: "mollets",
+    abdos: "abdos", Abdos: "abdos", ABDOS: "abdos",
+  };
+
+  const volume = new Map<GroupeMuscle, { groupe: GroupeMuscle; sets: number }>();
   for (const s of data as any[]) {
-    const g = s.exercice.groupe as GroupeMuscle;
+    const raw = s.exercice.groupe;
+    const g = GROUPE_NORMALIZE[raw] || "pectoraux";
     const v = volume.get(g) || { groupe: g, sets: 0 };
     v.sets += 1;
     volume.set(g, v);
@@ -110,6 +124,7 @@ export async function getVolumeSemaine(): Promise<{ groupe: string; sets: number
 
   return Array.from(volume.values()).map((v) => {
     const l = getVolumeLandmarks(v.groupe, niveau);
+    if (!l) return { ...v, status: "trop_peu", mev: 0, mav_min: 0, mav_max: 0, mrv: 0 };
     return {
       ...v,
       status: getVolumeStatus(v.sets, v.groupe, niveau),

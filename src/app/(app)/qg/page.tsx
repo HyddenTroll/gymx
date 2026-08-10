@@ -48,6 +48,7 @@ export default function QGPage() {
 
   useEffect(() => {
     (async () => {
+      try {
       const [fm, vol, fr, ef, reg, pc] = await Promise.all([
         getForceMax(), getVolumeSemaine(), getFrequenceMuscles(),
         getEffortMoyen(), getRegularite(), getPoidsCorps()]);
@@ -86,6 +87,9 @@ export default function QGPage() {
         if (saved) setGoals(JSON.parse(saved));
       }
       setLoading(false);
+    } catch {
+      setLoading(false);
+    }
     })();
     setCalRefreshKey((k) => k + 1);
   }, [supabase, pathname]);

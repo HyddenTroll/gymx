@@ -59,6 +59,7 @@ export default function SeancePage() {
   const [chrono, setChrono] = useState<number | null>(null); const [chronoRunning, setChronoRunning] = useState(false); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
   const savingSeries = useRef(new Set<string>());
+  const chronoExoId = useRef<string | null>(null);
   const pathname = "/seance";
 
   const chargerSeance = useCallback(async () => {
@@ -182,14 +183,20 @@ export default function SeancePage() {
   };
 
   const toggleSerie = async (exoIdx: number, serieIdx: number) => {
-    const serie = exercices[exoIdx].series[serieIdx];
+    const exo = exercices[exoIdx];
+    const serie = exo.series[serieIdx];
     const nouvelleValeur = !serie.validee;
     setExercices((prev) => {
       const n = [...prev];
       n[exoIdx] = { ...n[exoIdx], series: n[exoIdx].series.map((s, i) => i === serieIdx ? { ...s, validee: nouvelleValeur } : s) };
       return n;
     });
-    if (nouvelleValeur) { setChrono(resteRepos(exercices[exoIdx].role)); setChronoRunning(true); }
+    if (nouvelleValeur) {
+      chronoExoId.current = exo.exercice.id;
+      const savedRest = localStorage.getItem(`rest_${exo.exercice.id}`);
+      setChrono(savedRest ? Number(savedRest) : resteRepos(exo.role));
+      setChronoRunning(true);
+    }
     await sauverSerie(exoIdx, serieIdx);
   };
 
@@ -435,11 +442,25 @@ export default function SeancePage() {
         {chrono !== null && chrono > 0 && (
           <div className="fixed bottom-20 left-1/2 -translate-x-1/2 card px-4 py-2.5 flex items-center gap-3 z-50 animate-fade-in"
             style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.4)", borderColor: chrono <= 10 ? "var(--color-gymx-accent)" : "var(--color-gymx-border)" }}>
+            <button onClick={() => {
+              if (chronoExoId.current) {
+                const nv = Math.max(15, chrono - 15);
+                setChrono(nv);
+                localStorage.setItem(`rest_${chronoExoId.current}`, String(nv));
+              }
+            }} className="p-1 touch-target rounded-lg shrink-0 text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>-15s</button>
             <Timer className="w-5 h-5 shrink-0" style={{ color: chrono <= 10 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }} />
             <span className="font-mono font-bold text-lg" style={{ color: chrono <= 10 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)", fontFamily: "var(--font-mono)" }}>{formaterTemps(chrono)}</span>
             <button onClick={() => setChronoRunning(!chronoRunning)} className="p-1.5 touch-target rounded-xl transition-colors" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-text)" }}>
               {chronoRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
+            <button onClick={() => {
+              if (chronoExoId.current) {
+                const nv = chrono + 15;
+                setChrono(nv);
+                localStorage.setItem(`rest_${chronoExoId.current}`, String(nv));
+              }
+            }} className="p-1 touch-target rounded-lg shrink-0 text-sm font-semibold" style={{ color: "var(--color-gymx-muted)" }}>+15s</button>
             <button onClick={() => setChrono(0)} className="p-1.5 touch-target rounded-xl transition-colors" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
               <span className="text-xs font-semibold px-1">✕</span>
             </button>

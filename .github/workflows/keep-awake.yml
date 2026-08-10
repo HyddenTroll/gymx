@@ -1,8 +1,8 @@
-name: Keep Supabase Awake
+name: Keep Supabase Awake + Notifications
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # tous les jours à 6h UTC
+    - cron: '0 6,18 * * *'  # 6h et 18h UTC (8h et 20h Paris)
   workflow_dispatch:
 
 jobs:
@@ -16,3 +16,9 @@ jobs:
             -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
         timeout-minutes: 2
+
+      - name: Check + send notifications
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            "https://sport-beta-ebon.vercel.app/api/notifications/check"
+        timeout-minutes: 5

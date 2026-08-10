@@ -406,12 +406,12 @@ export default function SeancePage() {
               <span className="text-sm font-mono font-medium shrink-0" style={{ color: "var(--color-gymx-muted)", fontFamily: "var(--font-mono)" }}>
                 {exo.charge_suggeree > 0 ? (
                   <div className="text-right">
-                    <div className="text-sm font-mono font-medium" style={{ color: "var(--color-gymx-accent)", fontFamily: "var(--font-mono)" }}>
-                      {exo.charge_suggeree} <span className="text-[10px]" style={{ color: "var(--color-gymx-muted)" }}>{exo.unite_actuelle}</span>
-                    </div>
-                    <div className="text-[9px]" style={{ color: "var(--color-gymx-muted)" }}>
-                      pas de {exo.pas_suggere} kg
-                    </div>
+                    <span className="text-sm font-mono font-medium" style={{ color: "var(--color-gymx-accent)", fontFamily: "var(--font-mono)" }}>
+                      {exo.charge_suggeree} {exo.unite_actuelle}
+                    </span>
+                    <span className="text-[9px] ml-1" style={{ color: "var(--color-gymx-muted)" }}>
+                      (+{exo.pas_suggere})
+                    </span>
                   </div>
                 ) : exo.charge_cible > 0 ? `${exo.charge_cible} ${exo.unite_actuelle}` : "—"}
               </span>

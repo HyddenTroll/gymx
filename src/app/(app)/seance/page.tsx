@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { calculerProgressionRPE } from "@/lib/progression/engine";
 import { calculerEchauffement, getCoeffExercice } from "@/lib/dashboard/dashboard-service";
-import { initialiserGamification, ajouterXP, verifierRecords, verifierQuetes, badgeIcon, badgeLabel } from "@/lib/gamification/gamification-service";
+import { initialiserGamification, ajouterXP, verifierRecords, verifierQuetes, badgeIcon, badgeLabel, getNiveauLabel } from "@/lib/gamification/gamification-service";
 import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
@@ -325,6 +325,16 @@ export default function SeancePage() {
       else if (nouveauRecord) msg = `🏆 Record battu ! +${xpGagne} XP`;
       else msg = `+${xpGagne} XP gagné`;
       setMessage(msg);
+      fetch("/api/notifications/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          title: badgeDecroche ? `${badgeIcon(badgeDecroche)} Badge débloqué !` : "Séance terminée",
+          body: msg,
+          url: "/qg",
+        }),
+      }).catch(() => {});
       setTimeout(() => router.push("/qg"), 1200);
     } catch (e) {
       setMessage("Erreur lors de la sauvegarde — réessaie");

@@ -334,13 +334,25 @@ export default function QGPage() {
               <span className="text-sm mb-1" style={{ color: "var(--color-gymx-muted)" }}>kg</span>
               {poidsCorps.length > 1 && (
                 <span className="text-xs mb-1 font-semibold" style={{
-                  color: poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)"
+                  color: poidsCorps[0].poids <= poidsCorps[poidsCorps.length - 1].poids ? "var(--color-gymx-accent)" : "var(--color-gymx-text)"
                 }}>
-                  {poidsCorps[0].poids >= poidsCorps[poidsCorps.length - 1].poids ? "+" : ""}
+                  {poidsCorps[0].poids <= poidsCorps[poidsCorps.length - 1].poids ? "" : "+"}
+                  {(poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids) > 0 ? "+" : ""}
                   {(poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids).toFixed(1)} kg
                 </span>
               )}
             </div>
+            {poidsCorps.length > 2 && (
+              <div className="h-20">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={[...poidsCorps].reverse()}>
+                    <XAxis dataKey="date" tick={false} axisLine={false} tickLine={false} />
+                    <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 8, fill: "var(--color-gymx-muted)" }} width={28} axisLine={false} tickLine={false} />
+                    <Line type="monotone" dataKey="poids" stroke="var(--color-gymx-accent)" strokeWidth={2} dot={{ r: 2 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         )}
 

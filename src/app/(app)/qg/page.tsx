@@ -28,7 +28,7 @@ export default function QGPage() {
   const [forceMax, setForceMax] = useState<any[]>([]);
   const [volume, setVolume] = useState<any[]>([]);
   const [freq, setFreq] = useState<any[]>([]);
-  const [effort, setEffort] = useState<{ moyenne: number; total: number; trop_dur: boolean } | null>(null);
+  const [effort, setEffort] = useState<{ moyenne: number; total: number; trop_dur: boolean; fatigue_score: number; tendance: "hausse" | "baisse" | "stable" } | null>(null);
   const [regularite, setRegularite] = useState<{ streak: number; taux: number }>({ streak: 0, taux: 0 });
   const [poidsCorps, setPoidsCorps] = useState<any[]>([]);
   const [rmHistory, setRmHistory] = useState<any[]>([]);
@@ -51,7 +51,7 @@ export default function QGPage() {
       const [fm, vol, fr, ef, reg, pc] = await Promise.all([
         getForceMax(), getVolumeSemaine(), getFrequenceMuscles(),
         getEffortMoyen(), getRegularite(), getPoidsCorps()]);
-      setForceMax(fm); setVolume(vol); setFreq(fr); setEffort(ef); setRegularite(reg); setPoidsCorps(pc);
+      setForceMax(fm); setVolume(vol); setFreq(fr); setEffort(ef as any); setRegularite(reg); setPoidsCorps(pc);
       if (fm.length > 0) {
         const rmData = fm.slice(0, 5).flatMap((f: any) => {
           const dummy = [];
@@ -241,28 +241,34 @@ export default function QGPage() {
           ) : (
             <div className="space-y-2">
               {volume.map((v: any, i: number) => {
-                const isIdeal = v.status === "ideal";
+                const statusColor = v.status === "mav" ? "var(--color-gymx-accent)" : v.status === "trop_peu" ? "var(--color-gymx-text)" : "var(--color-gymx-fill-strong)";
+                const statusLabel = v.status === "trop_peu" ? "Sous MEV" : v.status === "mev" ? "MEV" : v.status === "mav" ? "MAV ✓" : v.status === "proche_mrv" ? "MRV ⚠" : "Trop";
+                const barMax = v.mrv || 20;
                 return (
                   <div key={i} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span style={{ color: "var(--color-gymx-muted)" }}>{v.groupe}</span>
                       <div className="flex items-center gap-2">
-                        <span style={{ color: "var(--color-gymx-text)" }}>{v.sets} séries</span>
-                        {isIdeal && <span className="text-xs font-semibold" style={{ color: "var(--color-gymx-accent)" }}>Idéal</span>}
+                        <span style={{ color: "var(--color-gymx-text)" }}>{v.sets} / {v.mav_min}-{v.mav_max}</span>
+                        <span className="text-[9px] font-semibold" style={{ color: statusColor }}>{statusLabel}</span>
                       </div>
                     </div>
                     <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-gymx-fill)" }}>
                       <div className="h-full rounded-full" style={{
-                        width: `${Math.min((v.sets / 20) * 100, 100)}%`,
-                        backgroundColor: isIdeal ? "var(--color-gymx-accent)" : "var(--color-gymx-fill-strong)"
+                        width: `${Math.min((v.sets / barMax) * 100, 100)}%`,
+                        backgroundColor: statusColor,
                       }} />
+                    </div>
+                    <div className="flex justify-between text-[8px]" style={{ color: "var(--color-gymx-muted)" }}>
+                      <span>MEV {v.mev}</span>
+                      <span>MAV {v.mav_min}-{v.mav_max}</span>
+                      <span>MRV {v.mrv}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-          <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>Zone idéale&nbsp;: 10-20 séries/muscle par semaine</p>
         </div>
 
         {freq.length > 0 && (
@@ -321,18 +327,21 @@ export default function QGPage() {
             <p className="label">Récupération</p>
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs"
-                style={{ backgroundColor: (effort.moyenne || 0) >= 8 ? "rgba(245,158,11,0.2)" : "var(--color-gymx-fill)", color: (effort.moyenne || 0) >= 8 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
-                {(effort.moyenne || 0) >= 8 ? "!" : "✓"}
+                style={{ backgroundColor: effort.fatigue_score >= 7 ? "rgba(245,158,11,0.2)" : "var(--color-gymx-fill)", color: effort.fatigue_score >= 7 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)" }}>
+                {effort.fatigue_score >= 7 ? "!" : effort.fatigue_score >= 4 ? "~" : "✓"}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold">
-                  {(effort.moyenne || 0) >= 8 ? "Fatigue élevée" : "Récupération normale"}
+                  Score fatigue : {effort.fatigue_score}/10
                 </p>
                 <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>
-                  {(effort.moyenne || 0) >= 8
-                    ? "RPE moyen ≥ 8 sur les dernières séances — envisage un deload"
-                    : `RPE moyen ${effort.moyenne} — bonne gestion`}
+                  RPE moyen {effort.moyenne} · Tendance {effort.tendance === "hausse" ? "↗ hausse" : effort.tendance === "baisse" ? "↘ baisse" : "→ stable"}
                 </p>
+                {effort.fatigue_score >= 7 && (
+                  <p className="text-xs font-semibold mt-1" style={{ color: "var(--color-gymx-accent)" }}>
+                    Fatigue élevée — envisage un deload
+                  </p>
+                )}
               </div>
             </div>
           </div>

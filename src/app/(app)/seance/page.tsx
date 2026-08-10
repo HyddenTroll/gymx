@@ -129,11 +129,30 @@ export default function SeancePage() {
   }, [router, supabase]);
 
   useEffect(() => { chargerSeance(); }, [chargerSeance]);
+  const timerStartedAt = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && timerStartedAt.current !== null && chrono !== null) {
+        const elapsed = Math.floor((Date.now() - timerStartedAt.current) / 1000);
+        const remaining = Math.max(0, chrono - elapsed);
+        setChrono(remaining);
+        timerStartedAt.current = Date.now();
+        if (remaining <= 0) setChronoRunning(false);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [chrono]);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (chronoRunning && chrono !== null && chrono > 0) { interval = setInterval(() => { setChrono((p) => (p !== null ? Math.max(0, p - 1) : null)); }, 1000); }
+    if (chronoRunning && chrono !== null && chrono > 0) {
+      timerStartedAt.current = Date.now();
+      interval = setInterval(() => { setChrono((p) => (p !== null ? Math.max(0, p - 1) : null)); }, 1000);
+    }
     if (chrono === 0) setChronoRunning(false);
-    return () => clearInterval(interval);
+    return () => { if (interval) clearInterval(interval); };
   }, [chronoRunning, chrono]);
 
   const updateSerie = (exoIdx: number, serieIdx: number, updates: Partial<SerieLog>) => {
@@ -215,6 +234,8 @@ export default function SeancePage() {
   const submitSlider = async (exoIdx: number, cran: Cran, rpeValue?: number) => {
     if (!seanceId) return;
     const exo = exercices[exoIdx];
+    const memeValeur = exo.slider === cran && exo.slider_submitted;
+    if (memeValeur) return;
     const rpe = rpeValue || (cran === "facile" ? 4 : cran === "ca_passe" ? 6 : cran === "dur" ? 8 : cran === "a_la_limite" ? 9 : 10);
     setExercices((prev) => { const n = [...prev]; n[exoIdx] = { ...n[exoIdx], slider: cran, slider_submitted: true }; return n; });
     const { data: { user } } = await supabase.auth.getUser();
@@ -375,28 +396,39 @@ export default function SeancePage() {
               ))}
             </div>
 
-            {exo.series.every((s) => s.validee) && !exo.slider_submitted && (
+            {exo.series.every((s) => s.validee) && (
               <div className="space-y-2 pt-3 border-t" style={{ borderColor: "var(--color-gymx-border)" }}>
-                <p className="text-sm font-medium" style={{ color: "var(--color-gymx-text)" }}>
-                  C&apos;était comment&nbsp;? <span style={{ color: "var(--color-gymx-muted)" }}>(RPE 1-10)</span>
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium" style={{ color: "var(--color-gymx-text)" }}>
+                    C&apos;était comment&nbsp;? <span style={{ color: "var(--color-gymx-muted)" }}>(RPE 1-10)</span>
+                  </p>
+                  {exo.slider_submitted && (
+                    <span className="text-[9px]" style={{ color: "var(--color-gymx-accent)" }}>✓ {exo.slider}</span>
+                  )}
+                </div>
                 <div className="flex gap-1 overflow-x-auto pb-1 overscroll-contain" style={{ touchAction: "pan-x" }}>
-                  {rpeLabels.map((r) => (
-                    <button key={r.rpe} onClick={() => submitSlider(exoIdx, rpeToCran(r.rpe), r.rpe)}
-                      className="flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl border touch-target shrink-0"
-                      style={{ minHeight: 48, minWidth: 36, borderColor: "var(--color-gymx-border)", backgroundColor: "var(--color-gymx-surface)" }}>
-                      <span className="w-5 h-1 rounded-full" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />
-                      <span className="text-[10px] font-bold">{r.rpe}</span>
-                    </button>
-                  ))}
+                  {rpeLabels.map((r) => {
+                    const cran = rpeToCran(r.rpe);
+                    const estSelectionne = exo.slider === cran && exo.slider_submitted;
+                    return (
+                      <button key={r.rpe} onClick={() => submitSlider(exoIdx, cran, r.rpe)}
+                        className="flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl border touch-target shrink-0"
+                        style={{
+                          minHeight: 48, minWidth: 36,
+                          borderColor: estSelectionne ? "var(--color-gymx-accent)" : "var(--color-gymx-border)",
+                          backgroundColor: estSelectionne ? "rgba(245,158,11,0.12)" : "var(--color-gymx-surface)",
+                        }}>
+                        <span className="w-5 h-1 rounded-full" style={{ backgroundColor: rpeColors[r.rpe - 1] }} />
+                        <span className="text-[10px] font-bold">{r.rpe}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-[10px] text-center" style={{ color: "var(--color-gymx-muted)" }}>
                   Facile (~4) · Dur (8) · Impossible (10)
                 </p>
               </div>
             )}
-
-            {exo.slider_submitted && (<p className="text-xs text-center" style={{ color: "var(--color-gymx-accent)" }}>✓ Effort enregistré</p>)}
           </div>
         ))}
 

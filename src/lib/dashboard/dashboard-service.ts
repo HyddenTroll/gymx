@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Niveau, GroupeMuscle } from "@/types";
+import { getVolumeLandmarks, getVolumeStatus } from "@/lib/volume-landmarks";
 
 /** Calcule le 1RM estimé — Brzycki (<10 reps) ou Epley (≥10) */
 export function estimer1RM(charge: number, reps: number): number {
@@ -72,10 +74,17 @@ export async function getForceMax() {
   }));
 }
 
-export async function getVolumeSemaine() {
+export async function getVolumeSemaine(): Promise<{ groupe: string; sets: number; status: string; mev: number; mav_min: number; mav_max: number; mrv: number }[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
+
+  const { data: profil } = await supabase
+    .from("profil")
+    .select("niveau")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const niveau: Niveau = profil?.niveau || "intermediaire";
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
@@ -91,18 +100,25 @@ export async function getVolumeSemaine() {
 
   if (!data) return [];
 
-  const volume = new Map<string, { groupe: string; sets: number }>();
+  const volume = new Map<string, { groupe: GroupeMuscle; sets: number }>();
   for (const s of data as any[]) {
-    const g = s.exercice.groupe;
+    const g = s.exercice.groupe as GroupeMuscle;
     const v = volume.get(g) || { groupe: g, sets: 0 };
     v.sets += 1;
     volume.set(g, v);
   }
 
-  return Array.from(volume.values()).map((v) => ({
-    ...v,
-    status: v.sets < 10 ? "trop_peu" : v.sets <= 20 ? "ideal" : "trop" as const,
-  }));
+  return Array.from(volume.values()).map((v) => {
+    const l = getVolumeLandmarks(v.groupe, niveau);
+    return {
+      ...v,
+      status: getVolumeStatus(v.sets, v.groupe, niveau),
+      mev: l.mev,
+      mav_min: l.mav_min,
+      mav_max: l.mav_max,
+      mrv: l.mrv,
+    };
+  });
 }
 
 export async function getFrequenceMuscles() {
@@ -141,7 +157,7 @@ export async function getFrequenceMuscles() {
 export async function getEffortMoyen() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { moyenne: 0, total: 0, trop_dur: false };
+  if (!user) return { moyenne: 0, total: 0, trop_dur: false, fatigue_score: 0, tendance: "stable" };
 
   const { data } = await supabase
     .from("effort")
@@ -150,15 +166,24 @@ export async function getEffortMoyen() {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  if (!data || data.length === 0) return { moyenne: 0, total: 0, trop_dur: false };
+  if (!data || data.length === 0) return { moyenne: 0, total: 0, trop_dur: false, fatigue_score: 0, tendance: "stable" };
 
   const avg = data.reduce((sum: number, e: any) => sum + e.valeur, 0) / data.length;
   const hardCount = data.filter((e: any) => e.valeur >= 9).length;
+  const trop_dur = hardCount > data.length * 0.3;
+
+  const dernieres3 = data.slice(0, 3).reduce((s: number, e: any) => s + e.valeur, 0) / 3;
+  const avant3 = data.length >= 6 ? data.slice(3, 6).reduce((s: number, e: any) => s + e.valeur, 0) / 3 : dernieres3;
+  const tendance: "hausse" | "baisse" | "stable" = dernieres3 > avant3 + 0.5 ? "hausse" : dernieres3 < avant3 - 0.5 ? "baisse" : "stable";
+
+  const fatigue_score = Math.round((avg * 0.6 + (trop_dur ? 3 : 0) + (tendance === "hausse" ? 1.5 : 0)) * 10) / 10;
 
   return {
     moyenne: Math.round(avg * 10) / 10,
     total: data.length,
-    trop_dur: hardCount > data.length * 0.3,
+    trop_dur,
+    fatigue_score: Math.min(10, fatigue_score),
+    tendance,
   };
 }
 

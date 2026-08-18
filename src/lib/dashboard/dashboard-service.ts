@@ -148,16 +148,31 @@ export async function getFrequenceMuscles() {
     .from("series")
     .select(`
       exercice:exercice_id!inner(groupe),
-      seance:seance_id!inner(date)
+      seance:seance_id!inner(date, user_id)
     `)
     .eq("validee", true)
+    .eq("seance.user_id", user.id)
     .gte("seance.date", weekAgo.toISOString().split("T")[0]);
 
   if (!data) return [];
 
+  const GROUPE_NORMALIZE: Record<string, GroupeMuscle> = {
+    pectoraux: "pectoraux", Pectoraux: "pectoraux", PECTORAUX: "pectoraux",
+    epaules: "epaules", Épaules: "epaules", EPAULES: "epaules",
+    dos: "dos", Dos: "dos", DOS: "dos",
+    quadriceps: "quadriceps", Quadriceps: "quadriceps", QUADRICEPS: "quadriceps",
+    ["ischios/fessiers"]: "ischios_fessiers", ["Ischios/Fessiers"]: "ischios_fessiers",
+    ischios_fessiers: "ischios_fessiers", Ischios_fessiers: "ischios_fessiers",
+    biceps: "biceps", Biceps: "biceps", BICEPS: "biceps",
+    triceps: "triceps", Triceps: "triceps", TRICEPS: "triceps",
+    mollets: "mollets", Mollets: "mollets", MOLLETS: "mollets",
+    abdos: "abdos", Abdos: "abdos", ABDOS: "abdos",
+  };
+
   const freq = new Map<string, Set<string>>();
   for (const s of data as any[]) {
-    const g = s.exercice.groupe;
+    const raw = s.exercice.groupe;
+    const g = GROUPE_NORMALIZE[raw] || raw;
     if (!freq.has(g)) freq.set(g, new Set());
     freq.get(g)!.add(s.seance.date);
   }
@@ -205,7 +220,7 @@ export async function getEffortMoyen() {
 export async function getRegularite() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { streak: 0, taux: 0 };
+  if (!user) return { streak: 0, taux: 0, total: 0 };
 
   const { data: prog } = await supabase
     .from("programme_actif")
@@ -213,7 +228,7 @@ export async function getRegularite() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!prog) return { streak: 0, taux: 0 };
+  if (!prog) return { streak: 0, taux: 0, total: 0 };
 
   const { data: seances } = await supabase
     .from("seances")
@@ -223,18 +238,18 @@ export async function getRegularite() {
     .order("date", { ascending: false })
     .limit(30);
 
-  if (!seances || seances.length === 0) return { streak: 0, taux: 0 };
+  if (!seances || seances.length === 0) return { streak: 0, taux: 0, total: 0 };
 
-  const todayDate = new Date();
   const datesUniques = Array.from(new Set((seances as any[]).map((s: any) => s.date)))
     .sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
 
+  const maxGap = Math.ceil(7 / prog.jours_par_semaine);
   let streak = 0;
-  let expectedDate = new Date(todayDate);
+  let expectedDate = new Date();
   for (const dateStr of datesUniques) {
     const d = new Date(dateStr + "T00:00:00");
     const diff = Math.round((expectedDate.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff === 0 || diff === 1) {
+    if (diff <= maxGap) {
       streak++;
       expectedDate = d;
     } else break;
@@ -248,7 +263,7 @@ export async function getRegularite() {
   const expectedSessions = Math.round((totalDays / 7) * prog.jours_par_semaine);
   const taux = Math.round((seances.length / Math.max(1, expectedSessions)) * 100);
 
-  return { streak, taux };
+  return { streak, taux, total: seances.length };
 }
 
 export interface FatigueMuscle {
@@ -436,7 +451,9 @@ export async function getProgressTrend(userId: string): Promise<TrendGlobal> {
 
   const meilleurRM = (series: any[]): number => {
     return series.reduce((best, s) => {
-      const rm = Number(s.charge) * (1 + Number(s.reps) / 30);
+      const charge = Number(s.charge);
+      const reps = Number(s.reps);
+      const rm = estimer1RM(charge, reps);
       return rm > best ? rm : best;
     }, 0);
   };

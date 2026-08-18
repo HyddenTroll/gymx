@@ -172,19 +172,48 @@ export default function SeancePage() {
       if (p) { profilNiveau = p.niveau; profilObjectif = p.objectif; profilRef.current = { niveau: p.niveau, objectif: p.objectif }; }
     }
 
-    const { data: prog } = await supabase.from("programme_actif").select("*").single();
+    const { data: prog } = await supabase.from("programme_actif").select("*").eq("user_id", currentUser?.id).single();
     if (!prog) { setNoProgramme(true); setLoading(false); return; }
     const { data: structures } = await supabase.from("programme_structure").select("id, exercice_id, ordre, series_cibles, reps_cibles, role, fige")
       .eq("programme_actif_id", prog.id).eq("jour", result.seance.jour_du_programme).order("ordre");
     if (!structures || structures.length === 0) { setNoProgramme(true); setLoading(false); return; }
 
     const allIds = structures.map((s: any) => s.exercice_id);
-    const [{ data: allExercises }, { data: allCharges }] = await Promise.all([
+
+    let lastSessionId: string | null = null;
+    if (currentUser) {
+      const { data: ls } = await supabase
+        .from("seances")
+        .select("id")
+        .eq("user_id", currentUser.id)
+        .eq("terminee", true)
+        .neq("id", result.seance.id)
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ls) lastSessionId = ls.id;
+    }
+
+    const lastSeriesPromise = lastSessionId
+      ? supabase.from("series").select("exercice_id, reps, ordre").eq("seance_id", lastSessionId).eq("validee", true)
+      : Promise.resolve({ data: null });
+
+    const [{ data: allExercises }, { data: allCharges }, { data: lastSeriesData }] = await Promise.all([
       supabase.from("exercices").select("*").in("id", allIds),
       supabase.from("charges").select("*").in("exercice_id", allIds).eq("user_id", prog.user_id),
+      lastSeriesPromise,
     ]);
     const exoMap = new Map((allExercises || []).map((e: any) => [e.id, e]));
     const chargeMap = new Map((allCharges || []).map((c: any) => [c.exercice_id, c]));
+
+    const lastSeriesMap = new Map<string, { reps: number; ordre: number }[]>();
+    if (lastSeriesData) {
+      for (const s of lastSeriesData as any[]) {
+        if (!lastSeriesMap.has(s.exercice_id)) lastSeriesMap.set(s.exercice_id, []);
+        lastSeriesMap.get(s.exercice_id)!.push({ reps: s.reps, ordre: s.ordre });
+      }
+      for (const [, list] of lastSeriesMap) list.sort((a, b) => a.ordre - b.ordre);
+    }
 
     let seriesParExo = new Map<string, SerieLog[]>();
     if (!result.nouvelle && result.exercices.length > 0) {
@@ -199,9 +228,10 @@ export default function SeancePage() {
     const exosAvecCharges: ExerciceEnCours[] = [];
     const chargesToInsert: any[] = [];
 
+    const isNouvelle = result.nouvelle;
     for (const s of structures) {
       let exo: any = exoMap.get(s.exercice_id) || null;
-      if (exo && exclusSet.has(exo.id)) {
+      if (isNouvelle && exo && exclusSet.has(exo.id)) {
         const newId = await faireRotation(s.id, exo.id, exo.sous_region, s.fige, true, exo.groupe);
         if (newId) {
           exo = exoMap.get(newId);
@@ -211,14 +241,34 @@ export default function SeancePage() {
           }
         }
       }
+      if (isNouvelle && exo && s.role === "accessoire" && !s.fige) {
+        const rotatedId = await faireRotation(s.id, exo.id, exo.sous_region, false, false, exo.groupe);
+        if (rotatedId) {
+          exo = exoMap.get(rotatedId);
+          if (!exo) {
+            const { data: newExo } = await supabase.from("exercices").select("*").eq("id", rotatedId).single();
+            if (newExo) { exo = newExo; exoMap.set(rotatedId, newExo); }
+          }
+        }
+      }
       let chargeCible = 0;
       if (exo) {
-        const charge: any = chargeMap.get(exo.id);
+        let charge: any = chargeMap.get(exo.id);
+        if (!charge) {
+          const { data: rotCharge } = await supabase.from("charges").select("*").eq("user_id", prog.user_id).eq("exercice_id", exo.id).maybeSingle();
+          charge = rotCharge || null;
+        }
         chargeCible = charge?.charge_actuelle ?? 0;
         if (!charge) chargesToInsert.push({ user_id: prog.user_id, exercice_id: exo.id, charge_actuelle: 0, unite: exo.unite_par_defaut, pas: exo.pas_par_defaut, sens: exo.assist_inverse ? "inverse" : "normal", compteur_echecs: 0 });
       }
       const exoId = exo?.id || s.exercice_id;
-      const series = seriesParExo.get(exoId) || Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exoId, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
+      const series = seriesParExo.get(exoId) || (() => {
+        const last = lastSeriesMap.get(exoId);
+        if (last && last.length > 0) {
+          return last.slice(0, s.series_cibles).map((ls, i) => ({ exercice_id: exoId, reps: ls.reps, charge: chargeCible, validee: false, ordre: i }));
+        }
+        return Array.from({ length: s.series_cibles }, (_, i) => ({ exercice_id: exoId, reps: s.reps_cibles, charge: chargeCible, validee: false, ordre: i }));
+      })();
       const effortExo = efforts.find((e: any) => e.exercice_id === exoId);
       const { data: lastEffort } = currentUser ? await supabase.from("effort").select("valeur").eq("user_id", currentUser.id).eq("exercice_id", exoId).neq("seance_id", result.seance.id).order("created_at", { ascending: false }).limit(1).maybeSingle() : { data: null };
       const dernierRPE = (lastEffort as any)?.valeur || null;
@@ -230,7 +280,7 @@ export default function SeancePage() {
     for (const charge of chargesToInsert) await supabase.from("charges").insert(charge);
     setExercices(exosAvecCharges);
     setLoading(false);
-  }, [router, supabase]);
+  }, [supabase]);
 
   useEffect(() => { chargerSeance(); }, [chargerSeance]);
   const timerStartedAt = useRef<number | null>(null);
@@ -280,7 +330,7 @@ export default function SeancePage() {
       unite: exo.unite_actuelle,
       validee: serie.validee,
       ordre: serie.ordre,
-    });
+    }, { onConflict: "seance_id,exercice_id,ordre" });
     savingSeries.current.delete(key);
     setSaved(true); setTimeout(() => setSaved(false), 1500);
   };
@@ -361,10 +411,18 @@ export default function SeancePage() {
     const { data: historique } = await supabase.from("effort").select("valeur").eq("user_id", user!.id).eq("exercice_id", exo.exercice.id).order("created_at", { ascending: false }).limit(5);
     const historiqueRPE = (historique || []).map((e: any) => e.valeur).reverse();
 
+    const seriesValidees = exercices[exoIdx].series.filter((s) => s.validee);
+    const chargeReelle = seriesValidees.length > 0
+      ? Math.max(...seriesValidees.map((s) => Number(s.charge) || 0))
+      : Number(chargeData.charge_actuelle) || 0;
     const pasReel = exercices[exoIdx]?.pas_suggere || chargeData.pas;
-    const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: pasReel, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeData.charge_actuelle, historiqueRPE);
+    const resultat = calculerProgressionRPE(rpe, profil?.niveau || "intermediaire", { unite: chargeData.unite, pas: pasReel, sens: chargeData.sens, compteur_echecs: chargeData.compteur_echecs }, chargeReelle, historiqueRPE);
     await supabase.from("charges").update({ charge_actuelle: resultat.nouvelle_charge, compteur_echecs: resultat.nouveau_compteur_echecs, pas: pasReel }).eq("id", chargeData.id);
-    if (exo.role === "accessoire" && !exo.fige && exo.structure_id) { await faireRotation(exo.structure_id, exo.exercice.id, exo.exercice.sous_region, exo.fige, false, exo.exercice.groupe); }
+    setExercices((prev) => {
+      const n = [...prev];
+      n[exoIdx] = { ...n[exoIdx], charge_cible: resultat.nouvelle_charge, charge_suggeree: resultat.nouvelle_charge, pas_suggere: pasReel };
+      return n;
+    });
     const { data: derniereSeance } = await supabase
       .from("effort")
       .select("valeur, seance:seance_id!inner(id)")
@@ -397,7 +455,7 @@ export default function SeancePage() {
       for (const exo of exercices) {
         for (const serie of exo.series) {
           if (serie.validee) {
-            const { error } = await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre });
+            const { error } = await supabase.from("series").upsert({ seance_id: seanceId, exercice_id: serie.exercice_id, reps: serie.reps, charge: serie.charge, unite: exo.unite_actuelle, validee: true, ordre: serie.ordre }, { onConflict: "seance_id,exercice_id,ordre" });
             if (error) throw new Error("Erreur sauvegarde séries");
             const estRecord = await verifierRecords(user.id, serie.exercice_id, serie.charge, serie.reps);
             if (estRecord) { nouveauRecord = true; xpGagne += 100; }

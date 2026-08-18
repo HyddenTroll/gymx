@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BADGES, badgeIcon, getNiveauLabel } from "@/lib/gamification/gamification-service";
 import { SkeletonCard, SkeletonChart } from "@/components/skeleton";
 import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import Link from "next/link";
 
 const navItems = [
@@ -30,9 +30,8 @@ export default function QGPage() {
   const [volume, setVolume] = useState<any[]>([]);
   const [freq, setFreq] = useState<any[]>([]);
   const [effort, setEffort] = useState<{ moyenne: number; total: number; trop_dur: boolean; fatigue_score: number; tendance: "hausse" | "baisse" | "stable" } | null>(null);
-  const [regularite, setRegularite] = useState<{ streak: number; taux: number }>({ streak: 0, taux: 0 });
+  const [regularite, setRegularite] = useState<{ streak: number; taux: number; total: number }>({ streak: 0, taux: 0, total: 0 });
   const [poidsCorps, setPoidsCorps] = useState<any[]>([]);
-  const [rmHistory, setRmHistory] = useState<any[]>([]);
   const [gamification, setGamification] = useState<any>(null);
   const [profil, setProfil] = useState<any>(null);
   const [projections, setProjections] = useState<ProgressionSimple[]>([]);
@@ -58,15 +57,6 @@ export default function QGPage() {
         getEffortMoyen(), getRegularite(), getPoidsCorps()]);
       setForceMax(fm); setVolume(vol); setFreq(fr); setEffort(ef as any); setRegularite(reg); setPoidsCorps(pc);
       if (fm.length > 0) {
-        const rmData = fm.slice(0, 5).flatMap((f: any) => {
-          const dummy = [];
-          const base = f.rm * 0.7;
-          for (let i = 0; i < 8; i++) {
-            dummy.push({ semaine: `S${i + 1}`, [f.nom.split(" ")[0]]: Math.round(base + (f.rm - base) * (i / 7)) });
-          }
-          return [{ nom: f.nom.split(" ")[0], data: dummy }];
-        });
-        setRmHistory(rmData.slice(0, 1));
       }
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -240,16 +230,13 @@ export default function QGPage() {
               ))}
             </div>
           )}
-          {rmHistory.length > 0 && (
-            <div className="h-32 mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={rmHistory[0]?.data || []}>
-                  <XAxis dataKey="semaine" tick={{ fontSize: 10, fill: "var(--color-gymx-muted)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "var(--color-gymx-muted)" }} axisLine={false} tickLine={false} width={30} />
-                  <Tooltip contentStyle={{ backgroundColor: "var(--color-gymx-surface)", border: "1px solid var(--color-gymx-border)", borderRadius: "8px", fontSize: "12px" }} />
-                  <Line type="monotone" dataKey={rmHistory[0]?.nom || "kg"} stroke="var(--color-gymx-accent)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+          {forceMax.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {forceMax.slice(0, 5).map((f: any, i: number) => (
+                <span key={i} className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
+                  {f.nom} : {f.rm} kg
+                </span>
+              ))}
             </div>
           )}
         </div>
@@ -262,7 +249,7 @@ export default function QGPage() {
           </div>
           <div className="card p-4 space-y-1">
             <p className="label">Séances</p>
-            <span className="hero-value" style={{ fontSize: "2rem" }}>{regularite.streak}</span>
+            <span className="hero-value" style={{ fontSize: "2rem" }}>{regularite.total}</span>
             <p className="text-xs" style={{ color: "var(--color-gymx-muted)" }}>faites</p>
           </div>
         </div>
@@ -427,22 +414,24 @@ export default function QGPage() {
             <div className="flex items-end gap-2">
               <span className="hero-value" style={{ fontSize: "2rem" }}>{poidsCorps[0].poids}</span>
               <span className="text-sm mb-1" style={{ color: "var(--color-gymx-muted)" }}>kg</span>
-              {poidsCorps.length > 1 && (
+              {poidsCorps.length > 1 && (() => {
+                const delta = poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids;
+                const signe = delta > 0 ? "+" : "";
+                return (
                 <span className="text-xs mb-1 font-semibold" style={{
-                  color: poidsCorps[0].poids <= poidsCorps[poidsCorps.length - 1].poids ? "var(--color-gymx-accent)" : "var(--color-gymx-text)"
+                  color: delta >= 0 ? "var(--color-gymx-accent)" : "var(--color-gymx-text)"
                 }}>
-                  {poidsCorps[0].poids <= poidsCorps[poidsCorps.length - 1].poids ? "" : "+"}
-                  {(poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids) > 0 ? "+" : ""}
-                  {(poidsCorps[0].poids - poidsCorps[poidsCorps.length - 1].poids).toFixed(1)} kg
+                  {signe}{delta.toFixed(1)} kg
                 </span>
-              )}
+                );
+              })()}
             </div>
             {poidsCorps.length > 2 && (
               <div className="h-20">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={[...poidsCorps].reverse()}>
                     <XAxis dataKey="date" tick={false} axisLine={false} tickLine={false} />
-                    <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 8, fill: "var(--color-gymx-muted)" }} width={28} axisLine={false} tickLine={false} />
+                    <YAxis domain={[(d: number) => Math.floor(d - 1), (d: number) => Math.ceil(d + 1)]} tick={{ fontSize: 8, fill: "var(--color-gymx-muted)" }} width={28} axisLine={false} tickLine={false} />
                     <Line type="monotone" dataKey="poids" stroke="var(--color-gymx-accent)" strokeWidth={2} dot={{ r: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>

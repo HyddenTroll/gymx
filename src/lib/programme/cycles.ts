@@ -42,36 +42,38 @@ export async function verifierCycle(userId: string): Promise<CycleInfo> {
   }
 
   const dateDebut = new Date(prog.date_debut);
-  const aujourdHui = new Date();
-  const joursEcoules = Math.floor((aujourdHui.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24));
-  const semaineGlobale = Math.max(1, Math.ceil(joursEcoules / 7) || 1);
-  const cycle = prog.cycle_courant;
-  const phase = getPhase(cycle);
-  const phaseSemaine = Math.min(4, ((semaineGlobale - 1) % 4) + 1);
-  const deloadDue = phase === "deload" || phaseSemaine === 4;
+  const joursEcoules = Math.floor((Date.now() - dateDebut.getTime()) / (1000 * 60 * 60 * 24));
+  const semaineGlobale = Math.max(1, Math.ceil(joursEcoules / 7));
+  const cycle = 1 + Math.floor((semaineGlobale - 1) / prog.longueur_bloc);
+
+  const semaineDansBloc = ((semaineGlobale - 1) % prog.longueur_bloc) + 1;
+  const phaseSize = 4;
+  const phaseIndex = Math.min(2, Math.floor((semaineDansBloc - 1) / phaseSize));
+  const phases: Phase[] = ["accumulation", "intensification", "deload"];
+  const phase = phases[phaseIndex];
+  const phaseSemaine = ((semaineDansBloc - 1) % phaseSize) + 1;
 
   return {
     phase,
-    phaseSemaine,
+    phaseSemaine: Math.min(4, phaseSemaine),
     phaseTotal: 4,
     cycleCourant: cycle,
-    deloadDue,
-    volumeCoeff: getVolumeCoeff(phase, phaseSemaine),
+    deloadDue: phase === "deload" || phaseSemaine === 4,
+    volumeCoeff: getVolumeCoeff(phase, Math.min(4, phaseSemaine)),
     intensiteNote: getIntensiteNote(phase),
   };
 }
 
 export async function incrementerSemaine(userId: string): Promise<boolean> {
   const supabase = createClient();
-  const { data: prog } = await supabase.from("programme_actif").select("*").eq("user_id", userId).single();
+  const { data: prog } = await supabase.from("programme_actif").select("id, date_debut").eq("user_id", userId).single();
   if (!prog) return false;
 
-  const nouvelleSemaine = prog.semaine_courante + 1;
-  const nouveauCycle = nouvelleSemaine > prog.longueur_bloc ? prog.cycle_courant + 1 : prog.cycle_courant;
+  const joursEcoules = Math.floor((Date.now() - new Date(prog.date_debut).getTime()) / (1000 * 60 * 60 * 24));
+  const semaineCalendaire = Math.max(1, Math.ceil(joursEcoules / 7));
 
   await supabase.from("programme_actif").update({
-    semaine_courante: nouvelleSemaine > prog.longueur_bloc ? 1 : nouvelleSemaine,
-    cycle_courant: nouveauCycle,
+    semaine_courante: semaineCalendaire,
   }).eq("id", prog.id);
 
   return true;

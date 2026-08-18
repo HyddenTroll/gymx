@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { estimer1RM } from "@/lib/dashboard/dashboard-service";
 
 const XP_SEANCE = 50;
 const XP_RECORD = 100;
@@ -101,18 +102,16 @@ export async function verifierRecords(
   const supabase = createClient();
   if (!Number(charge) || !Number(reps)) return false;
 
-  const rm = Number(charge) * (1 + Number(reps) / 30);
+  const rm = estimer1RM(Number(charge), Number(reps));
 
-  const { data: meilleur } = await supabase
+  const { data: series } = await supabase
     .from("series")
     .select("charge, reps")
     .eq("validee", true)
-    .eq("exercice_id", exerciceId)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .eq("exercice_id", exerciceId);
 
-  if (!meilleur || meilleur.length === 0) return true;
-  const meilleurRM = Number(meilleur[0].charge) * (1 + Number(meilleur[0].reps) / 30);
+  if (!series || series.length === 0) return true;
+  const meilleurRM = Math.max(...series.map((s: any) => estimer1RM(Number(s.charge), Number(s.reps))));
   return rm > meilleurRM;
 }
 

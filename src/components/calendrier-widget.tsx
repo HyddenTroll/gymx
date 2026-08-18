@@ -145,6 +145,8 @@ export default function CalendrierWidget({ refreshKey }: { refreshKey?: number }
             <button key={ds} onClick={() => { setSelectedDate(ds); setShowAdd(false); }}
               className="aspect-square flex flex-col items-center justify-center rounded-md touch-target relative text-xs"
               style={{
+                minWidth: 0,
+                minHeight: 0,
                 backgroundColor: estAujourdhui ? "var(--color-gymx-accent)" : "transparent",
                 color: estAujourdhui ? "#0a0a0b" : "var(--color-gymx-text)",
                 fontWeight: estAujourdhui ? 700 : 500,

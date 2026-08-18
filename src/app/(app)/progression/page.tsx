@@ -258,7 +258,7 @@ export default function ProgressionPage() {
               <p className="label">Évolution des charges</p>
             </div>
             {Object.entries(evolutionData).map(([exoId, points]) => {
-              const data = points.sort((a, b) => a.date.localeCompare(b.date));
+              const data = [...points].sort((a, b) => a.date.localeCompare(b.date));
               if (data.length < 2) return null;
               return (
                 <div key={exoId} className="pt-1 border-t first:pt-0 first:border-t-0" style={{ borderColor: "var(--color-gymx-border)" }}>

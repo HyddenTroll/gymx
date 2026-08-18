@@ -10,9 +10,9 @@ import { getOrCreateSeanceDuJour } from "@/lib/seance/seance-service";
 import { faireRotation } from "@/lib/programme/rotation-service";
 import { incrementerSemaine } from "@/lib/programme/cycles";
 import { SkeletonCard } from "@/components/skeleton";
-import { Check, Timer, Play, Pause, BarChart3, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
+import { Check, Timer, Play, Pause, RefreshCw } from "lucide-react";
 import type { Cran, Exercice, Niveau, Objectif } from "@/types";
-import Link from "next/link";
+import BottomNav from "@/components/bottom-nav";
 
 interface SerieLog { id?: string; exercice_id: string; reps: number; charge: number; validee: boolean; ordre: number; }
 interface ExerciceEnCours {
@@ -46,12 +46,6 @@ const resteRepos = (role: string, rpe?: number, objectif?: string): number => {
   return base;
 };
 
-const navItems = [
-  { href: "/qg", label: "QG", icon: BarChart3 }, { href: "/seance", label: "Séance", icon: Dumbbell },
-  { href: "/bibliotheque", label: "Bibliothèque", icon: Library }, { href: "/progression", label: "Progression", icon: TrendingUp },
-  { href: "/profil", label: "Profil", icon: User },
-];
-
 export default function SeancePage() {
   const router = useRouter(); const supabase = createClient();
   const [loading, setLoading] = useState(true); const [noProfil, setNoProfil] = useState(false); const [noProgramme, setNoProgramme] = useState(false);
@@ -69,7 +63,6 @@ export default function SeancePage() {
   const [addExoSearch, setAddExoSearch] = useState("");
   const [addExoFilter, setAddExoFilter] = useState<string | null>(null);
   const [addExoLoading, setAddExoLoading] = useState(false);
-  const pathname = "/seance";
 
   const groupesList = ["Pectoraux", "Épaules", "Dos", "Quadriceps", "Ischios/Fessiers", "Biceps", "Triceps", "Mollets", "Abdos"];
 
@@ -490,7 +483,6 @@ export default function SeancePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
           title: badgeDecroche ? `${badgeIcon(badgeDecroche)} Badge débloqué !` : "Séance terminée",
           body: msg,
           url: "/qg",
@@ -764,17 +756,7 @@ export default function SeancePage() {
         )}
       </div>
 
-      <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50"
-        style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
-        {navItems.map((item) => {
-          const active = pathname === item.href;
-          return (<Link key={item.href} href={item.href} className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-            style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
-            <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
-            <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
-          </Link>);
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }

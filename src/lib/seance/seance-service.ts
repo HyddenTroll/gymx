@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { getLocalToday } from "@/lib/dates";
 
 /**
  * Vérifie si l'utilisateur a un profil et un programme actif
@@ -50,7 +51,7 @@ export async function getOrCreateSeanceDuJour(): Promise<{
 
   if (!prog) return null;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
 
   await supabase
     .from("seances")

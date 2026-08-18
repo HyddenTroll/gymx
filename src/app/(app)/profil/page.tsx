@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import BottomNav from "@/components/bottom-nav";
 import { mettreAJourProfil, ajouterPoids, reintegrerExercice } from "@/lib/dashboard/projections";
 import { getPoidsCorps } from "@/lib/dashboard/dashboard-service";
 import { ArrowLeft, Weight, X, Dumbbell, Bell, BellOff } from "lucide-react";
@@ -293,9 +294,11 @@ export default function ProfilPage() {
         <button onClick={handleSignOut}
           className="w-full py-3.5 rounded-xl text-sm font-semibold touch-target mt-2"
           style={{ border: "1px solid var(--color-gymx-border)", color: "var(--color-gymx-muted)" }}>
-          Déconnexion
+          DǸconnexion
         </button>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

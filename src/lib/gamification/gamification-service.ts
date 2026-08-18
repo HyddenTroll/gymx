@@ -106,9 +106,10 @@ export async function verifierRecords(
 
   const { data: series } = await supabase
     .from("series")
-    .select("charge, reps")
+    .select("charge, reps, seance:seance_id!inner(user_id)")
     .eq("validee", true)
-    .eq("exercice_id", exerciceId);
+    .eq("exercice_id", exerciceId)
+    .eq("seance.user_id", userId);
 
   if (!series || series.length === 0) return true;
   const meilleurRM = Math.max(...series.map((s: any) => estimer1RM(Number(s.charge), Number(s.reps))));

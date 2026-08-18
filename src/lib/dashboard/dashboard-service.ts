@@ -7,8 +7,7 @@ export function estimer1RM(charge: number, reps: number): number {
   if (reps <= 0 || charge <= 0) return 0;
   if (reps === 1) return charge;
   if (reps < 10) return Math.round(charge * (36 / (37 - reps))); // Brzycki
-  if (reps <= 12) return Math.round(charge * (1 + reps / 30)); // Epley
-  return charge;
+  return Math.round(charge * (1 + reps / 30)); // Epley (étendu au-delà de 12)
 }
 
 /** Coefficient de progression par exercice (certains exos progressent plus vite) */
@@ -21,15 +20,17 @@ export function getCoeffExercice(slug: string): number {
   return COEFFS[slug] || 1.0;
 }
 
-/** Suggère des séries d'échauffement */
+/** Suggère des séries d'échauffement (unité variable, pas adapté au type) */
 export function calculerEchauffement(charge: number, unite: string): { label: string; charge: number }[] {
   if (charge <= 0 || unite === "reps") return [];
-  return [
-    { label: "Barre vide", charge: 20 },
-    { label: "50%", charge: Math.round(charge * 0.5 / 2.5) * 2.5 },
-    { label: "70%", charge: Math.round(charge * 0.7 / 2.5) * 2.5 },
-    { label: "90%", charge: Math.round(charge * 0.9 / 2.5) * 2.5 },
-  ].filter((s) => s.charge < charge);
+  const pas = unite === "kg" ? 2.5 : unite === "plaque" ? 1 : 1;
+  const arrondir = (v: number) => Math.max(0, Math.round(v / pas) * pas);
+  const steps: { label: string; charge: number }[] = [];
+  if (unite === "kg") steps.push({ label: "Barre vide", charge: 20 });
+  steps.push({ label: "50%", charge: arrondir(charge * 0.5) });
+  steps.push({ label: "70%", charge: arrondir(charge * 0.7) });
+  steps.push({ label: "90%", charge: arrondir(charge * 0.9) });
+  return steps.filter((s) => s.charge < charge && s.charge > 0);
 }
 
 export async function getForceMax() {
@@ -285,34 +286,51 @@ export async function getFatigueParMuscle(userId: string): Promise<FatigueMuscle
 
   const groupes = Object.keys(SEUILS);
   const maintenant = new Date();
+
+  // Une seule requête : dernière série validée par groupe musculaire (LATERAL join).
+  const { data: series } = await supabase
+    .from("series")
+    .select(`
+      created_at,
+      exercice:exercice_id!inner(groupe),
+      seance:seance_id!inner(id)
+    `)
+    .eq("validee", true)
+    .in("exercice.groupe", groupes)
+    .order("created_at", { ascending: false })
+    .limit(1000);
+
+  const parGroupe = new Map<string, any>();
+  for (const s of (series || []) as any[]) {
+    const g = s.exercice?.groupe;
+    if (!g || parGroupe.has(g)) continue;
+    parGroupe.set(g, s);
+  }
+
+  const { data: efforts } = await supabase
+    .from("effort")
+    .select("valeur, seance_id, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const effortParSeance = new Map<string, number>();
+  for (const e of (efforts || []) as any[]) {
+    if (!effortParSeance.has(e.seance_id)) effortParSeance.set(e.seance_id, e.valeur);
+  }
+
   const resultats: FatigueMuscle[] = [];
-
   for (const groupe of groupes) {
-    const { data: serie } = await supabase
-      .from("series")
-      .select("created_at, exercice:exercice_id!inner(groupe), seance:seance_id!inner(id)")
-      .eq("exercice.groupe", groupe)
-      .eq("validee", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
+    const serie = parGroupe.get(groupe);
     if (!serie) {
       resultats.push({ groupe, recup_pct: 100, jours_depuis: 99, dernier_rpe: null });
       continue;
     }
 
-    const dateSerie = new Date((serie as any).created_at);
+    const dateSerie = new Date(serie.created_at);
     const joursDepuis = Math.max(0, (maintenant.getTime() - dateSerie.getTime()) / (1000 * 60 * 60 * 24));
 
-    const { data: effort } = await supabase
-      .from("effort")
-      .select("valeur")
-      .eq("seance_id", (serie as any).seance_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const rpe = (effort as any)?.valeur || 5;
+    const rpe = effortParSeance.get(serie.seance_id) || 5;
     const recupJours = SEUILS[groupe]?.recup_jours || 2;
     const recupPct = Math.min(100, Math.round((joursDepuis / recupJours) * 100));
 
@@ -511,18 +529,23 @@ export async function getProgressTrend(userId: string): Promise<TrendGlobal> {
     });
   }
 
+  const ilY7J = new Date();
+  ilY7J.setDate(ilY7J.getDate() - 7);
+  const ilY14J = new Date();
+  ilY14J.setDate(ilY14J.getDate() - 14);
+
   const { data: tonnageSemaine } = await supabase
     .from("series")
-    .select("charge, reps, seance:seance_id!inner(created_at)")
+    .select("charge, reps, seance:seance_id!inner(date)")
     .eq("validee", true)
-    .gte("seance.created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+    .gte("seance.date", ilY7J.toISOString().split("T")[0]);
 
   const { data: tonnageAvant } = await supabase
     .from("series")
-    .select("charge, reps, seance:seance_id!inner(created_at)")
+    .select("charge, reps, seance:seance_id!inner(date)")
     .eq("validee", true)
-    .lt("seance.created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    .gte("seance.created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
+    .lt("seance.date", ilY7J.toISOString().split("T")[0])
+    .gte("seance.date", ilY14J.toISOString().split("T")[0]);
 
   const calcTonnage = (data: any[] | null): number => {
     return (data || []).reduce((sum, s: any) => sum + Number(s.charge) * Number(s.reps), 0);

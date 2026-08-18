@@ -10,17 +10,9 @@ import { getPushPullRatio, getIntensiteDistribution, getPointsFaibles, labelSous
 import { createClient } from "@/lib/supabase/client";
 import { BADGES, badgeIcon, getNiveauLabel } from "@/lib/gamification/gamification-service";
 import { SkeletonCard, SkeletonChart } from "@/components/skeleton";
-import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, Dumbbell, Library, TrendingUp, User, RefreshCw } from "lucide-react";
+import { Zap, Trophy, BarChart3, Activity, Clock, Weight, AlertTriangle, Target, TrendingUp, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import Link from "next/link";
-
-const navItems = [
-  { href: "/qg", label: "QG", icon: BarChart3 },
-  { href: "/seance", label: "Séance", icon: Dumbbell },
-  { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
-  { href: "/progression", label: "Progression", icon: TrendingUp },
-  { href: "/profil", label: "Profil", icon: User },
-];
+import BottomNav from "@/components/bottom-nav";
 
 export default function QGPage() {
   const supabase = createClient();
@@ -647,19 +639,7 @@ export default function QGPage() {
 
       <CalendrierWidget refreshKey={calRefreshKey} />
 
-      <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50" style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
-        {navItems.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href}
-              className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-              style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
-              <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
-              <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }

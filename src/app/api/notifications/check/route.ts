@@ -1,12 +1,10 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import webpush from "web-push";
+import { configureWebPush } from "@/lib/notifications/webpush";
+import { getLocalToday } from "@/lib/dates";
 
-webpush.setVapidDetails(
-  "mailto:moi@gymx.local",
-  "BLF9CX2KrZwE1GaC50vywGJPcQlYLjdzPQb6MFGvvpCgQkq-DNbG95gysCBmno3O4rPeljR8S7zaWsdffzgthL8",
-  "PcM6EWkODwqRWLBuq_0DGgL4Ac3zM0iq4FGT6XDEqfE"
-);
+configureWebPush();
 
 function adminClient() {
   return createSupabaseClient(
@@ -19,14 +17,13 @@ const ESTIMULE_1RM = (charge: number, reps: number) => {
   if (reps <= 0 || charge <= 0) return 0;
   if (reps === 1) return charge;
   if (reps < 10) return Math.round(charge * (36 / (37 - reps)));
-  if (reps <= 12) return Math.round(charge * (1 + reps / 30));
-  return charge;
+  return Math.round(charge * (1 + reps / 30));
 };
 
 export async function GET() {
   try {
     const supabase = adminClient();
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalToday();
 
     const { data: subs } = await supabase.from("push_subscriptions").select("user_id, subscription");
     if (!subs || subs.length === 0) return NextResponse.json({ checked: 0, sent: 0 });

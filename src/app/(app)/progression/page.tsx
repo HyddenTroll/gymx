@@ -3,18 +3,9 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getPoidsCorps, getForceMax } from "@/lib/dashboard/dashboard-service";
-import { SkeletonCard } from "@/components/skeleton";
-import { Trophy, Weight, BarChart3, Dumbbell, Library, TrendingUp, User, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar, Download, TrendingUp as TrendIcon } from "lucide-react";
+import { Trophy, Weight, Clock, Trash2, Save, ChevronDown, ChevronUp, Calendar, Download, TrendingUp as TrendIcon } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
-import Link from "next/link";
-
-const navItems = [
-  { href: "/qg", label: "QG", icon: BarChart3 },
-  { href: "/seance", label: "Séance", icon: Dumbbell },
-  { href: "/bibliotheque", label: "Bibliothèque", icon: Library },
-  { href: "/progression", label: "Progression", icon: TrendingUp },
-  { href: "/profil", label: "Profil", icon: User },
-];
+import BottomNav from "@/components/bottom-nav";
 
 export default function ProgressionPage() {
   const supabase = createClient();
@@ -30,7 +21,6 @@ export default function ProgressionPage() {
   const [exoNomMap, setExoNomMap] = useState<Map<string, string>>(new Map());
   const [message, setMessage] = useState("");
   const [evolutionData, setEvolutionData] = useState<Record<string, { date: string; charge: number }[]>>({});
-  const pathname = "/progression";
 
   useEffect(() => {
     (async () => {
@@ -443,20 +433,7 @@ export default function ProgressionPage() {
         </div>
       </div>
 
-      <nav className="sticky bottom-0 border-t bg-gymx-surface px-2 py-1 flex justify-around items-center z-50"
-        style={{ borderColor: "var(--color-gymx-border)", paddingBottom: "max(env(safe-area-inset-bottom, 4px), 4px)" }}>
-        {navItems.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href}
-              className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors touch-target"
-              style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }}>
-              <item.icon className="w-5 h-5" style={{ color: active ? "var(--color-gymx-accent)" : "var(--color-gymx-muted)" }} />
-              <span className="text-[10px] font-semibold tracking-[0.04em]" style={{ fontFamily: "var(--font-body)" }}>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }
